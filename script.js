@@ -1,115 +1,80 @@
-// script.js
+const BASE_URL = "https://script.google.com/macros/s/AKfycbwXuVeQYg6kOXrWkVXrJ8ElYgK9xOkamCNqaNebhNKVXPZdH4PRqzb65qLiWTAON8ji/exec";
 
-// !!! 중요: 여기에 배포된 Google Apps Script 웹 앱 URL을 붙여넣으세요.
-// 예를 들어, 'https://script.google.com/macros/s/AKfycbz_YOUR_DEPLOYMENT_ID/exec'
-// 이 URL은 Apps Script 배포 후 얻게 됩니다.
-const APPS_SCRIPT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwXuVeQYg6kOXrWkVXrJ8ElYgK9xOkamCNqaNebhNKVXPZdH4PRqzb65qLiWTAON8ji/exec'; // 이 값을 반드시 업데이트하세요!
+document.getElementById("saveSettingsBtn").addEventListener("click", async () => {
+  const settings = {
+    grade: document.getElementById("gradeInput").value,
+    classNum: document.getElementById("classNumInput").value,
+    studentNum: document.getElementById("studentNumInput").value,
+    studentName: document.getElementById("studentNameInput").value,
+    weight: parseFloat(document.getElementById("weightInput").value)
+  };
 
-// 이 함수는 사용자에게 앱스 스크립트 URL을 입력하라고 알려주는 용도로만 사용됩니다.
-// 실제 배포 시에는 위 APPS_SCRIPT_WEB_APP_URL에 URL을 직접 입력해야 합니다.
-function checkAppsScriptUrlAndPrompt() {
-    if (APPS_SCRIPT_WEB_APP_URL === 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE' || !APPS_SCRIPT_WEB_APP_URL.startsWith('https://script.google.com/macros/s/')) {
-        showCustomAlert("⚠️ Apps Script 웹 앱 URL을 설정해야 합니다! 이 앱을 사용하려면 `script.js` 파일에서 `APPS_SCRIPT_WEB_APP_URL` 변수를 업데이트해주세요.");
-        return false;
-    }
-    return true;
+  const response = await fetch(BASE_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "saveUserSettings", settings: settings })
+  });
+
+  const result = await response.json();
+  if (result.recommendedCaffeine) {
+    document.getElementById("recommendedCaffeine").innerText = result.recommendedCaffeine.toFixed(1);
+    updateCaffeineSummary();
+    showCustomAlert("설정이 저장되었습니다!");
+  } else {
+    showCustomAlert("설정 저장 실패. 다시 시도해주세요.");
+  }
+});
+
+document.getElementById("addEntryBtn").addEventListener("click", async () => {
+  const entry = {
+    name: document.getElementById("foodName").value,
+    amount: parseFloat(document.getElementById("amount").value),
+    caffeineMg: parseFloat(document.getElementById("caffeineMg").value)
+  };
+
+  const response = await fetch(BASE_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "addCaffeineEntry", entry: entry })
+  });
+
+  const result = await response.json();
+  updateCaffeineSummary(result);
+  showCustomAlert("섭취 기록이 추가되었습니다!");
+});
+
+async function updateCaffeineSummary() {
+  const response = await fetch(`${BASE_URL}?action=getDailyCaffeineSummary`);
+  const result = await response.json();
+  document.getElementById("currentCaffeine").innerText = result.cumulativeCaffeine.toFixed(1);
+  document.getElementById("caffeinePercentage").innerText = result.percentage.toFixed(1) + "%";
+  document.getElementById("caffeineProgressBar").style.width = result.percentage.toFixed(1) + "%";
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    const weightInput = document.getElementById('weightInput');
-    const gradeInput = document.getElementById('gradeInput');
-    const classNumInput = document.getElementById('classNumInput');
-    const studentNumInput = document.getElementById('studentNumInput');
-    const studentNameInput = document.getElementById('studentNameInput');
-    const saveSettingsBtn = document.getElementById('saveSettingsBtn'); // 설정 저장 버튼 추가
+// 선택 음료 자동 입력 (선택사항)
+document.getElementById("predefinedDrinks").addEventListener("change", async (e) => {
+  const selected = e.target.value;
+  if (!selected) return;
+  const response = await fetch(`${BASE_URL}?action=getPredefinedCaffeineData`);
+  const data = await response.json();
+  const item = data.find(d => d.name === selected);
+  if (item) {
+    document.getElementById("foodName").value = item.name;
+    document.getElementById("amount").value = item.amount;
+    document.getElementById("caffeineMg").value = item.caffeine;
+  }
+});
 
-    const recommendedCaffeineSpan = document.getElementById('recommendedCaffeine');
-    const currentCaffeineSpan = document.getElementById('currentCaffeine');
-    const caffeineProgressBar = document.getElementById('caffeineProgressBar');
-    const caffeinePercentageSpan = document.getElementById('caffeinePercentage');
-    const predefinedDrinksSelect = document.getElementById('predefinedDrinks');
-    const foodNameInput = document.getElementById('foodName');
-    const amountInput = document.getElementById('amount');
-    const caffeineMgInput = document.getElementById('caffeineMg');
-    const addEntryBtn = document.getElementById('addEntryBtn');
+// 커스텀 알림 모달
+function showCustomAlert(message) {
+  document.getElementById("customAlertMessage").innerText = message;
+  document.getElementById("customAlertModal").style.display = "block";
+}
+document.getElementById("closeCustomAlertBtn").addEventListener("click", () => {
+  document.getElementById("customAlertModal").style.display = "none";
+});
 
-    // 모달 관련 요소
-    const bodyStatusModal = document.getElementById('bodyStatusModal');
-    const closeModalBtn = document.getElementById('closeModalBtn');
-    const humanModel = document.getElementById('humanModel');
-    const caffeineStatusText = document.getElementById('caffeineStatusText');
-    const statusDescription = document.getElementById('statusDescription');
-
-    // 사용자 정의 알림 모달 요소
-    const customAlertModal = document.getElementById('customAlertModal');
-    const customAlertMessage = document.getElementById('customAlertMessage');
-    const closeCustomAlertBtn = document.getElementById('closeCustomAlertBtn');
-
-    let currentUserId = localStorage.getItem('caffeineTrackerUserId'); // 로컬 스토리지에서 사용자 ID 로드
-    if (!currentUserId) {
-        currentUserId = 'user_' + Math.random().toString(36).substr(2, 9) + Date.now(); // 고유 ID 생성
-        localStorage.setItem('caffeineTrackerUserId', currentUserId); // 로컬 스토리지에 저장
-    }
-
-    // 사용자 정의 알림 모달을 표시하는 함수
-    function showCustomAlert(message) {
-        customAlertMessage.textContent = message;
-        customAlertModal.classList.add('visible');
-
-        closeCustomAlertBtn.onclick = function() {
-            customAlertModal.classList.remove('visible');
-        };
-    }
-
-    // Apps Script API 호출을 위한 범용 fetch 헬퍼 함수
-    async function callAppsScriptAPI(action, method = 'GET', data = null) {
-        if (!checkAppsScriptUrlAndPrompt()) {
-            return { error: "Apps Script URL이 설정되지 않았습니다." };
-        }
-
-        let url = `${APPS_SCRIPT_WEB_APP_URL}?action=${action}&userId=${currentUserId}`;
-        const options = {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        };
-
-        if (data && method === 'POST') {
-            options.body = JSON.stringify({ ...data, action: action, userId: currentUserId });
-        } else if (data && method === 'GET') {
-             // GET 요청의 경우 URL 쿼리 파라미터에 데이터 추가 (간단한 데이터에만 적합)
-             // 현재 API 설계는 action과 userId만 GET 파라미터로 사용
-             // 더 복잡한 GET 요청 데이터는 필요시 여기에 추가
-        }
-
-        try {
-            const response = await fetch(url, options);
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`HTTP 오류! 상태: ${response.status}, 응답: ${errorText}`);
-            }
-            return await response.json();
-        } catch (error) {
-            console.error('Apps Script API 호출 오류:', error);
-            showCustomAlert('데이터 처리 중 오류가 발생했습니다: ' + error.message);
-            return { error: error.message };
-        }
-    }
-
-    // 초기 데이터 로드 및 UI 업데이트
-    async function loadInitialData() {
-        const settings = await callAppsScriptAPI('getUserSettings', 'GET');
-        if (settings && !settings.error) {
-            // 사용자 설정 UI 업데이트
-            if (settings.weight) weightInput.value = settings.weight;
-            if (settings.grade) gradeInput.value = settings.grade;
-            if (settings.classNum) classNumInput.value = settings.classNum;
-            if (settings.studentNum) studentNumInput.value = settings.studentNum;
-            if (settings.studentName) studentNameInput.value = settings.studentName;
-            updateRecommendedCaffeineUI(settings.recommendedCaffeine);
-        }
-
-        const summary = await callAppsScriptAPI('getDailyCaffeineSummary', 'GET');
-        if (summary && !summary.error) {
-            updateCaffeineSummaryUI(summ
+// 초기 데이터 로드
+window.addEventListener("load", () => {
+  updateCaffeineSummary();
+});
