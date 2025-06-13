@@ -3,7 +3,7 @@
 // !!! 중요: 여기에 배포된 Google Apps Script 웹 앱 URL을 붙여넣으세요.
 // 예를 들어, 'https://script.google.com/macros/s/AKfycbz_YOUR_DEPLOYMENT_ID/exec'
 // 이 URL은 Apps Script 배포 후 얻게 됩니다.
-const APPS_SCRIPT_WEB_APP_URL = 'https://script.google.com/macros/library/d/1POic6lHefSrYrZFdgjnnxvqu4F9ltxuEMG9ojRiodzMbf6iDRcDrx6xD/4'; // 이 값을 반드시 업데이트하세요!
+const APPS_SCRIPT_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwXuVeQYg6kOXrWkVXrJ8ElYgK9xOkamCNqaNebhNKVXPZdH4PRqzb65qLiWTAON8ji/exec'; // 이 값을 반드시 업데이트하세요!
 
 // 이 함수는 사용자에게 앱스 스크립트 URL을 입력하라고 알려주는 용도로만 사용됩니다.
 // 실제 배포 시에는 위 APPS_SCRIPT_WEB_APP_URL에 URL을 직접 입력해야 합니다.
