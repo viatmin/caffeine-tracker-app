@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>카페인 추적기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css"> <!-- 외부 CSS 파일 연결 -->
+</head>
+<body class="font-inter bg-gradient-to-br from-blue-50 to-purple-100 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8 space-y-7 border border-gray-100 transform transition-all duration-300 hover:scale-[1.01]">
+        <h1 class="text-4xl font-extrabold text-center text-gray-800 mb-6 tracking-tight">☕ 카페인 추적기 🚀</h1>
+
+        <!-- 사용자 설정 섹션 -->
+        <div class="bg-blue-50 rounded-2xl p-5 shadow-inner">
+            <h2 class="text-xl font-bold text-blue-800 mb-3">내 설정</h2>
+            <div class="space-y-3 mb-4">
+                <div class="flex items-center space-x-3">
+                    <label for="gradeInput" class="text-gray-700 font-medium">학년:</label>
+                    <input type="number" id="gradeInput" placeholder="학년"
+                           class="flex-grow p-2.5 border border-blue-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200 shadow-sm">
+                </div>
+                <div class="flex items-center space-x-3">
+                    <label for="classNumInput" class="text-gray-700 font-medium">반:</label>
+                    <input type="number" id="classNumInput" placeholder="반"
+                           class="flex-grow p-2.5 border border-blue-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200 shadow-sm">
+                </div>
+                <div class="flex items-center space-x-3">
+                    <label for="studentNumInput" class="text-gray-700 font-medium">번호:</label>
+                    <input type="number" id="studentNumInput" placeholder="번호"
+                           class="flex-grow p-2.5 border border-blue-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200 shadow-sm">
+                </div>
+                <div class="flex items-center space-x-3">
+                    <label for="studentNameInput" class="text-gray-700 font-medium">이름:</label>
+                    <input type="text" id="studentNameInput" placeholder="이름"
+                           class="flex-grow p-2.5 border border-blue-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200 shadow-sm">
+                </div>
+                <div class="flex items-center space-x-3">
+                    <label for="weightInput" class="text-gray-700 font-medium">체중 (kg):</label>
+                    <input type="number" id="weightInput" placeholder="체중 입력"
+                           class="flex-grow p-2.5 border border-blue-200 rounded-lg focus:ring-blue-500 focus:border-blue-500 transition duration-200 shadow-sm">
+                </div>
+            </div>
+            <button id="saveSettingsBtn"
+                    class="w-full bg-blue-600 text-white py-2.5 px-5 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 focus:ring-offset-2 transition duration-300 transform active:scale-95 shadow-md">
+                내 설정 저장
+            </button>
+            <p class="text-gray-700 text-lg mt-4">
+                일일 카페인 권장량: <span id="recommendedCaffeine" class="font-extrabold text-blue-600">0.0</span> mg
+            </p>
+            <p class="text-sm text-gray-500 mt-1">권장량 = 체중($\text{kg}$) $\times$ 2.5mg</p>
+        </div>
+
+        <!-- 현재 섭취량 현황 섹션 -->
+        <div class="bg-purple-50 rounded-2xl p-5 shadow-inner">
+            <h2 class="text-xl font-bold text-purple-800 mb-3">오늘의 카페인 섭취</h2>
+            <div class="flex justify-between items-center mb-3">
+                <span class="text-gray-700 font-medium text-lg">누적 섭취량:</span>
+                <span id="currentCaffeine" class="font-extrabold text-purple-600 text-xl">0.0</span> mg
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-5 relative overflow-hidden shadow-inner">
+                <div id="caffeineProgressBar" class="h-full rounded-full transition-all duration-700 ease-out" style="width: 0%;"></div>
+                <span id="caffeinePercentage" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-sm font-bold text-gray-800 leading-none">0.0%</span>
+            </div>
+        </div>
+
+        <!-- 카페인 섭취 기록 섹션 -->
+        <div class="bg-green-50 rounded-2xl p-5 shadow-inner">
+            <h2 class="text-xl font-bold text-green-800 mb-3">새 섭취 기록 추가</h2>
+            <div class="space-y-4">
+                <div>
+                    <label for="predefinedDrinks" class="block text-sm font-medium text-gray-700 mb-1">☕ 빠른 추가 (음료 선택):</label>
+                    <select id="predefinedDrinks" class="w-full p-2.5 border border-green-200 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-200 shadow-sm">
+                        <option value="">-- 음료 선택 --</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="foodName" class="block text-sm font-medium text-gray-700 mb-1">📝 식품 이름:</label>
+                    <input type="text" id="foodName" placeholder="예: 아메리카노"
+                           class="w-full p-2.5 border border-green-200 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-200 shadow-sm">
+                </div>
+                <div>
+                    <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">📏 섭취량:</label>
+                    <input type="number" id="amount" placeholder="예: 200"
+                           class="w-full p-2.5 border border-green-200 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-200 shadow-sm">
+                </div>
+                <div>
+                    <label for="caffeineMg" class="block text-sm font-medium text-gray-700 mb-1">🌿 카페인 함량 (mg):</label>
+                    <input type="number" id="caffeineMg" placeholder="예: 100"
+                           class="w-full p-2.5 border border-green-200 rounded-lg focus:ring-green-500 focus:border-green-500 transition duration-200 shadow-sm">
+                </div>
+                <button id="addEntryBtn"
+                        class="w-full bg-green-600 text-white py-3 px-5 rounded-lg font-semibold hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 focus:ring-offset-2 transition duration-300 transform active:scale-95 shadow-md">
+                    기록 추가
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 인체 모형 및 상태 팝업 (모달) -->
+    <div id="bodyStatusModal" class="modal-overlay">
+        <div class="modal-content bg-white rounded-3xl shadow-xl p-7 w-11/12 max-w-sm text-center">
+            <h2 class="text-3xl font-bold text-gray-800 mb-5">✨ 현재 카페인 상태 ✨</h2>
+            <div class="flex justify-center items-center h-48 mb-6">
+                <img id="humanModel" src="https://placehold.co/150x200/cccccc/ffffff?text=Human" alt="Human Body Model" class="h-full object-contain filter drop-shadow-lg">
+            </div>
+            <p id="caffeineStatusText" class="text-xl font-bold text-gray-700 mb-2">누적 섭취량: 0.0mg (0.0%)</p>
+            <p id="statusDescription" class="text-lg text-gray-600 mb-6">정상 상태 (0-25%): 편안하고 안정적입니다.</p>
+            <button id="closeModalBtn"
+                    class="w-full bg-blue-600 text-white py-3 px-5 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 focus:ring-offset-2 transition duration-300 transform active:scale-95 shadow-md">
+                확인
+            </button>
+        </div>
+    </div>
+
+    <!-- 사용자 정의 알림 모달 -->
+    <div id="customAlertModal" class="modal-overlay">
+        <div class="modal-content bg-white rounded-3xl shadow-xl p-7 w-11/12 max-w-sm text-center">
+            <h2 class="text-3xl font-bold text-gray-800 mb-5">🔔 알림 🔔</h2>
+            <p id="customAlertMessage" class="text-xl font-semibold text-gray-700 mb-6"></p>
+            <button id="closeCustomAlertBtn"
+                    class="w-full bg-blue-600 text-white py-3 px-5 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 focus:ring-offset-2 transition duration-300 transform active:scale-95 shadow-md">
+                닫기
+            </button>
+        </div>
+    </div>
+
+    <script src="script.js"></script> <!-- 외부 JavaScript 파일 연결 -->
+</body>
+</html>

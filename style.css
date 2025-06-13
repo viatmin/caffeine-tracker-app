@@ -1,0 +1,85 @@
+/* style.css */
+
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+/* 모달 오버레이 */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6); /* 더 진한 배경 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease-in-out, visibility 0.4s ease-in-out;
+}
+
+.modal-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* 모달 내용 */
+.modal-content {
+    transform: translateY(-30px);
+    transition: transform 0.4s ease-in-out;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3); /* 더 강한 그림자 */
+}
+
+.modal-overlay.visible .modal-content {
+    transform: translateY(0);
+}
+
+/* 심장 박동 애니메이션 */
+@keyframes heartbeat {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+.heartbeat {
+    animation: heartbeat 0.8s infinite cubic-bezier(0.2, 0.6, 0.8, 1); /* 좀 더 자연스러운 애니메이션 */
+}
+
+/* 몸 떨림 애니메이션 */
+@keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-6px) rotate(1deg); } /* 회전 추가 */
+    50% { transform: translateX(6px) rotate(-1deg); }
+    75% { transform: translateX(-6px) rotate(1deg); }
+    100% { transform: translateX(0); }
+}
+.shake {
+    animation: shake 0.2s infinite alternate; /* 번갈아 가며 떨림 */
+}
+
+/* 진행률 바 색상 변화 */
+#caffeineProgressBar {
+    /* 기본은 Tailwind 클래스에서 설정되므로, 여기서는 커스텀 오버라이드만 */
+    /* 색상은 script.js에서 직접 조작 */
+}
+
+/* 플레이스홀더 이미지에 약간의 스타일 추가 */
+#humanModel {
+    border-radius: 10px; /* 모서리 둥글게 */
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+/* 모바일 반응형 조절 (Tailwind가 대부분 처리하지만, 필요시 추가) */
+@media (max-width: 640px) {
+    .max-w-md {
+        max-width: 100%; /* 모바일에서 전체 너비 사용 */
+    }
+    .p-8 {
+        padding: 1.5rem; /* 모바일에서 패딩 줄이기 */
+    }
+    .text-4xl {
+        font-size: 2.25rem; /* 모바일 제목 크기 줄이기 */
+    }
+}
