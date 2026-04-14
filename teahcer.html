@@ -3148,6 +3148,52 @@ function renderAwardsTab() {
     }).join('');
 }
 
+// ── 뱃지 임계값 GAS 연동 ──────────────────────────────────────
+function loadBadgeThresholdsFromGAS() {
+    google.script.run
+        .withSuccessHandler(function(result) {
+            if (!result || !result.success) return;
+            S.badgeHabitDays = result.habitStart || 3;
+            S.badgeStreakDays = result.streak || 7;
+            S.badgeMonthlyDays = result.monthly || 10;
+            try { localStorage.setItem('monSettings', JSON.stringify(S)); } catch(e) {}
+            if (document.getElementById('setting_badgeHabitDays'))
+                document.getElementById('setting_badgeHabitDays').value = S.badgeHabitDays;
+            if (document.getElementById('setting_badgeStreakDays'))
+                document.getElementById('setting_badgeStreakDays').value = S.badgeStreakDays;
+            if (document.getElementById('setting_badgeMonthlyDays'))
+                document.getElementById('setting_badgeMonthlyDays').value = S.badgeMonthlyDays;
+        })
+        .withFailureHandler(function(err) {
+            console.warn('뱃지 임계값 로드 실패:', err);
+        })
+        .getBadgeThresholds();
+}
+
+function saveBadgeThresholdsToGAS() {
+    const habitDays = parseInt(document.getElementById('setting_badgeHabitDays')?.value || S.badgeHabitDays || 3);
+    const streakDays = parseInt(document.getElementById('setting_badgeStreakDays')?.value || S.badgeStreakDays || 7);
+    const monthlyDays = parseInt(document.getElementById('setting_badgeMonthlyDays')?.value || S.badgeMonthlyDays || 10);
+    const statusEl = document.getElementById('badgeThresholdSaveStatus');
+    if (statusEl) statusEl.textContent = '저장 중...';
+    google.script.run
+        .withSuccessHandler(function(result) {
+            if (result && result.success) {
+                S.badgeHabitDays = habitDays;
+                S.badgeStreakDays = streakDays;
+                S.badgeMonthlyDays = monthlyDays;
+                try { localStorage.setItem('monSettings', JSON.stringify(S)); } catch(e) {}
+                if (statusEl) { statusEl.textContent = '✅ 저장 완료!'; setTimeout(()=>{ if(statusEl) statusEl.textContent=''; }, 3000); }
+            } else {
+                if (statusEl) statusEl.textContent = '❌ 저장 실패: ' + (result && result.error ? result.error : '오류');
+            }
+        })
+        .withFailureHandler(function(err) {
+            if (statusEl) statusEl.textContent = '❌ 오류: ' + err;
+        })
+        .saveBadgeThresholds(habitDays, streakDays, monthlyDays);
+}
+
 function loadAwardSettings() {
     try {
         const raw = localStorage.getItem('awardSettings');
