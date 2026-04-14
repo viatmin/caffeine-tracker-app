@@ -18,14 +18,8 @@
 (function (global) {
   'use strict';
 
-  // ── GAS 웹앱 URL (index.html에서 window.GAS_API_URL = '...' 로 설정) ──────
-  // 또는 이 파일 상단에서 직접 설정 가능
-  // const GAS_API_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
-
   /**
    * fetch로 GAS API 호출
-   * @param {string} action  - 호출할 GAS 함수명
-   * @param {Array}  params  - 함수 인자 배열
    */
   async function _callGAS(action, params) {
     const baseUrl = global.GAS_API_URL;
@@ -35,8 +29,6 @@
 
     console.log('[gas-bridge] 호출:', action, params);
 
-    // ── GET 방식으로 전송 (CORS 문제 우회) ─────────────────
-    // GAS는 GET 요청에 대해 CORS 헤더를 정상적으로 반환함
     const url = new URL(baseUrl);
     url.searchParams.set('action', action);
     url.searchParams.set('params', JSON.stringify(params));
@@ -53,7 +45,6 @@
     const json = await res.json();
     console.log('[gas-bridge] 응답:', action, json);
 
-    // GAS handleAPIRequest가 { success, data } 형태로 반환
     if (json.success === false) {
       throw new Error(json.error || '알 수 없는 오류');
     }
@@ -63,31 +54,30 @@
 
   /**
    * google.script.run 폴리필
-   * 체이닝 지원: .withSuccessHandler(fn).withFailureHandler(fn).funcName(args)
-   *
-   * ⭐ 호출마다 독립적인 컨텍스트를 생성하여 동시 다중 호출 시
-   *    핸들러가 서로 덮어쓰이는 버그를 방지합니다.
+   * ⭐ 핵심 수정: withSuccessHandler/withFailureHandler도 항상 같은 Proxy를 반환
+   *    → 체이닝의 마지막에 어떤 함수명이 오더라도 Proxy가 가로채서 처리함
    */
   function _createCallContext() {
     let _successHandler = null;
     let _failureHandler = null;
 
-    const ctx = {
-      withSuccessHandler(fn) {
-        _successHandler = fn;
-        return ctx;
-      },
-      withFailureHandler(fn) {
-        _failureHandler = fn;
-        return ctx;
-      },
-    };
-
-    return new Proxy(ctx, {
+    const proxy = new Proxy({}, {
       get(target, prop) {
-        if (prop in target) return target[prop];
+        // 체이닝 메서드 — proxy 자신을 반환해야 이후 .funcName()도 Proxy를 통함
+        if (prop === 'withSuccessHandler') {
+          return function(fn) {
+            _successHandler = fn;
+            return proxy;
+          };
+        }
+        if (prop === 'withFailureHandler') {
+          return function(fn) {
+            _failureHandler = fn;
+            return proxy;
+          };
+        }
 
-        // GAS 함수 호출
+        // GAS 함수 호출 (checkLogin, saveBadgeThresholds 등 모든 함수명)
         return function (...args) {
           const onSuccess = _successHandler;
           const onFailure = _failureHandler;
@@ -105,6 +95,8 @@
         };
       }
     });
+
+    return proxy;
   }
 
   /**
@@ -112,14 +104,17 @@
    */
   const gasRunProxy = new Proxy({}, {
     get(_target, prop) {
-      // 매 접근마다 독립 컨텍스트 생성 → 동시 호출 간 핸들러 충돌 없음
       const ctx = _createCallContext();
-      return ctx[prop] !== undefined ? ctx[prop] : ctx.withSuccessHandler.bind(ctx);
+      // withSuccessHandler / withFailureHandler 직접 접근도 지원
+      if (prop === 'withSuccessHandler' || prop === 'withFailureHandler') {
+        return ctx[prop];
+      }
+      // google.script.run.checkLogin(...) 처럼 바로 함수 호출도 지원
+      return ctx[prop];
     }
   });
 
   // ── 전역 등록 ──────────────────────────────────────────────────────────────
-  // google.script.run 을 폴리필로 교체
   if (typeof global.google === 'undefined') {
     global.google = {};
   }
@@ -128,7 +123,6 @@
   }
   global.google.script.run = gasRunProxy;
 
-  // google.script.history, google.script.host 등 빈 객체로 폴백
   global.google.script.history = global.google.script.history || {
     push: () => {},
     replace: () => {},
