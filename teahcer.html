@@ -878,7 +878,7 @@
             <!-- 🏅 뱃지 관리 카드 (grid-column 전체 span) -->
             <div class="settings-card" style="grid-column:1/-1;">
                 <div class="settings-card-title">🏅 학생 뱃지 관리
-                    <span style="font-size:12px;font-weight:400;color:#9ca3af;margin-left:8px;">수여 모달에서 사용할 뱃지 리스트를 미리 정의합니다.</span>
+                    <span style="font-size:12px;font-weight:400;color:#9ca3af;margin-left:8px;">학생 카드 및 상세 모달에 표시될 뱃지를 설정합니다</span>
                 </div>
                 <div class="settings-info-box" style="margin-bottom:16px;">
                     🏅 <strong>뱃지 자동 부여 조건</strong> (조회 7일 기간 기준):<br>
@@ -3167,9 +3167,6 @@ function loadBadgeThresholdsFromGAS() {
             S.badgeHabitDays = result.habitStart || 3;
             S.badgeStreakDays = result.streak || 7;
             S.badgeMonthlyDays = result.monthly || 10;
-            S.badgeHabitName = result.habitStartName || '습관의 시작';
-            S.badgeStreakName = result.streakName || '꾸준한 습관';
-            S.badgeMonthlyName = result.monthlyName || '챌린지 달성';
             try { localStorage.setItem('monSettings', JSON.stringify(S)); } catch(e) {}
             if (document.getElementById('setting_badgeHabitDays'))
                 document.getElementById('setting_badgeHabitDays').value = S.badgeHabitDays;
@@ -3177,12 +3174,6 @@ function loadBadgeThresholdsFromGAS() {
                 document.getElementById('setting_badgeStreakDays').value = S.badgeStreakDays;
             if (document.getElementById('setting_badgeMonthlyDays'))
                 document.getElementById('setting_badgeMonthlyDays').value = S.badgeMonthlyDays;
-            if (document.getElementById('setting_badgeHabitName'))
-                document.getElementById('setting_badgeHabitName').value = S.badgeHabitName;
-            if (document.getElementById('setting_badgeStreakName'))
-                document.getElementById('setting_badgeStreakName').value = S.badgeStreakName;
-            if (document.getElementById('setting_badgeMonthlyName'))
-                document.getElementById('setting_badgeMonthlyName').value = S.badgeMonthlyName;
         })
         .withFailureHandler(function(err) {
             console.warn('뱃지 임계값 로드 실패:', err);
@@ -3194,9 +3185,6 @@ function saveBadgeThresholdsToGAS() {
     const habitDays = parseInt(document.getElementById('setting_badgeHabitDays')?.value || S.badgeHabitDays || 3);
     const streakDays = parseInt(document.getElementById('setting_badgeStreakDays')?.value || S.badgeStreakDays || 7);
     const monthlyDays = parseInt(document.getElementById('setting_badgeMonthlyDays')?.value || S.badgeMonthlyDays || 10);
-    const habitName = (document.getElementById('setting_badgeHabitName')?.value || S.badgeHabitName || '습관의 시작').trim();
-    const streakName = (document.getElementById('setting_badgeStreakName')?.value || S.badgeStreakName || '꾸준한 습관').trim();
-    const monthlyName = (document.getElementById('setting_badgeMonthlyName')?.value || S.badgeMonthlyName || '챌린지 달성').trim();
     const statusEl = document.getElementById('badgeThresholdSaveStatus');
     if (statusEl) statusEl.textContent = '저장 중...';
     google.script.run
@@ -3205,9 +3193,6 @@ function saveBadgeThresholdsToGAS() {
                 S.badgeHabitDays = habitDays;
                 S.badgeStreakDays = streakDays;
                 S.badgeMonthlyDays = monthlyDays;
-                S.badgeHabitName = habitName;
-                S.badgeStreakName = streakName;
-                S.badgeMonthlyName = monthlyName;
                 try { localStorage.setItem('monSettings', JSON.stringify(S)); } catch(e) {}
                 if (statusEl) { statusEl.textContent = '✅ 저장 완료!'; setTimeout(()=>{ if(statusEl) statusEl.textContent=''; }, 3000); }
             } else {
@@ -3217,7 +3202,7 @@ function saveBadgeThresholdsToGAS() {
         .withFailureHandler(function(err) {
             if (statusEl) statusEl.textContent = '❌ 오류: ' + err;
         })
-        .saveBadgeThresholds(habitDays, streakDays, monthlyDays, habitName, streakName, monthlyName);
+        .saveBadgeThresholds(habitDays, streakDays, monthlyDays);
 }
 
 function loadAwardSettings() {
@@ -3282,10 +3267,10 @@ function evaluateAwards(studentId, dates, baseDate) {
         } else if (award.id === 'sleep_good') {
             const asl = avgSleepForDates(studentId, dates);
             pass = asl >= S.sleepWarn && asl <= S.sleepGood;
-        } else {
-    // 커스텀 뱃지는 자동 계산 로직에서 제외 (선생님이 직접 수여할 때만 나타남)
-    pass = false; 
-}
+        } else if (award.id !== 'habit_start' && award.id !== 'streak_record' && award.id !== 'today_record') {
+            // 커스텀 뱃지: 조건 없이 always 표시 (설정에서 관리)
+            pass = award.alwaysShow === true;
+        }
         if (pass) earned.push(award);
     });
     return earned;
