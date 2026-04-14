@@ -3183,8 +3183,11 @@
         let weekCaffeineTotal = 0, weekSleepTotal = 0, sleepDays = 0;
         const caffeineDates = new Set();
         caffeineLogs.forEach(log => {
-          const logDate = getLogDateKST(log.time);
-          if(logDate >= startDateStr && logDate <= endDateStr) {
+          // log.time은 서버에서 "yyyy-MM-dd HH:mm:ss" 형식으로 내려옴
+          // getLogDateKST()는 UTC 보정 과정에서 날짜가 바뀔 수 있으므로
+          // 앞 10자리를 직접 잘라 날짜를 구함
+          const logDate = (log.time || '').slice(0, 10);
+          if(logDate && logDate >= startDateStr && logDate <= endDateStr) {
             weekCaffeineTotal += log.amount;
             caffeineDates.add(logDate);
           }
