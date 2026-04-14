@@ -3171,8 +3171,13 @@
         startDate = new Date();
         startDate.setDate(startDate.getDate() - 6);
       }
-      const startDateStr = startDate.toISOString().split('T')[0];
-      const endDateStr = endDate.toISOString().split('T')[0];
+      // ⭐ toISOString()은 UTC 기준이라 KST(+9h)에서 날짜가 하루 밀릴 수 있음 → KST 기준으로 직접 포맷
+      const toKSTDateStr = (d) => {
+        const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+        return kst.toISOString().split('T')[0];
+      };
+      const startDateStr = toKSTDateStr(startDate);
+      const endDateStr   = toKSTDateStr(endDate);
       const formatDate = (d) => `${d.getMonth() + 1}/${d.getDate()}`;
       const periodText = `${formatDate(startDate)} ~ ${formatDate(endDate)}`;
       window.currentAnalysisPeriod = { start: startDateStr, end: endDateStr, text: periodText };
