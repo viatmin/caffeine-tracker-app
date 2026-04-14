@@ -1110,6 +1110,7 @@
           setTimeout(checkReplyBubble, 1500);
           setTimeout(checkTeacherAwards, 2000);
           setTimeout(loadBadgeThresholds, 2500);
+          setInterval(loadBadgeThresholds, 5 * 60 * 1000); // ✅ 5분마다 교사 설정 자동 갱신
 
           // ⭐ 분석 중이면 GAS 호출 계열(loadCaffeineLogs, loadSleepLogs, refreshData, loadCaffeineDbFromGAS)을
           //    분석 완료까지 대기 후 실행 (최대 30초 폴링)
