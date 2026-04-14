@@ -896,24 +896,30 @@
                 <!-- 학생용 자동 뱃지 임계값 설정 -->
                 <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px 16px;margin-bottom:8px;">
                     <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:12px;">🏅 학생용 자동 뱃지 달성 기준 (교사 설정)</div>
-                    <div style="display:flex;flex-direction:column;gap:10px;">
-                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                            <span style="font-size:20px;">🌱</span>
-                            <label style="font-size:13px;font-weight:600;color:#374151;min-width:90px;">습관의 시작</label>
-                            <input type="number" id="setting_badgeHabitDays" class="settings-input" min="1" max="30" step="1" value="3" style="width:70px;">
+                    <div style="display:flex;flex-direction:column;gap:12px;">
+                        <!-- 🌱 습관의 시작 -->
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <span style="font-size:20px;flex-shrink:0;">🌱</span>
+                            <input type="text" id="setting_badgeHabitName" placeholder="뱃지 이름" value="습관의 시작"
+                                style="width:110px;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:600;">
+                            <input type="number" id="setting_badgeHabitDays" class="settings-input" min="1" max="365" step="1" value="3" style="width:65px;">
                             <span class="settings-unit">일 연속 기록 달성 시</span>
                         </div>
-                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                            <span style="font-size:20px;">🏆</span>
-                            <label style="font-size:13px;font-weight:600;color:#374151;min-width:90px;">꾸준한 습관</label>
-                            <input type="number" id="setting_badgeStreakDays" class="settings-input" min="1" max="365" step="1" value="7" style="width:70px;">
+                        <!-- 🏆 꾸준한 습관 -->
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <span style="font-size:20px;flex-shrink:0;">🏆</span>
+                            <input type="text" id="setting_badgeStreakName" placeholder="뱃지 이름" value="꾸준한 습관"
+                                style="width:110px;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:600;">
+                            <input type="number" id="setting_badgeStreakDays" class="settings-input" min="1" max="365" step="1" value="7" style="width:65px;">
                             <span class="settings-unit">일 연속 기록 달성 시</span>
                         </div>
-                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                            <span style="font-size:20px;">🌟</span>
-                            <label style="font-size:13px;font-weight:600;color:#374151;min-width:90px;">월간 마스터</label>
-                            <input type="number" id="setting_badgeMonthlyDays" class="settings-input" min="1" max="31" step="1" value="10" style="width:70px;">
-                            <span class="settings-unit">일 이상 / 해당 월 기록 시</span>
+                        <!-- 🌟 챌린지 달성 -->
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <span style="font-size:20px;flex-shrink:0;">🌟</span>
+                            <input type="text" id="setting_badgeMonthlyName" placeholder="뱃지 이름" value="챌린지 달성"
+                                style="width:110px;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:600;">
+                            <input type="number" id="setting_badgeMonthlyDays" class="settings-input" min="1" max="365" step="1" value="10" style="width:65px;">
+                            <span class="settings-unit">일 이상 기록 달성 시</span>
                         </div>
                     </div>
                     <div style="margin-top:12px;display:flex;align-items:center;gap:8px;">
@@ -1091,7 +1097,8 @@ const charts={};
 let S={cafMaxFixed:0,cafWarn:56,cafOver:100,
        sleepSevere:6,sleepWarn:8,sleepGood:10,
        aiMinCaf:3,aiMinSleep:3,awardMinDays:5,
-       badgeHabitDays:3,badgeStreakDays:7,badgeMonthlyDays:10};
+       badgeHabitDays:3,badgeStreakDays:7,badgeMonthlyDays:10,
+       badgeHabitName:'습관의 시작',badgeStreakName:'꾸준한 습관',badgeMonthlyName:'챌린지 달성'};
 
 function loadSettings(){
     try{const sv=localStorage.getItem('monSettings');if(sv)S={...S,...JSON.parse(sv)};}catch(e){}
