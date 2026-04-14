@@ -3268,8 +3268,8 @@ function evaluateAwards(studentId, dates, baseDate) {
             const asl = avgSleepForDates(studentId, dates);
             pass = asl >= S.sleepWarn && asl <= S.sleepGood;
         } else if (award.id !== 'habit_start' && award.id !== 'streak_record' && award.id !== 'today_record') {
-            // 커스텀 뱃지: 조건 없이 always 표시 (설정에서 관리)
-            pass = award.alwaysShow === true;
+            // 커스텀 뱃지: 자동 표시 안 함 — 교사가 직접 수여해야만 학생 카드에 표시됨
+            pass = false;
         }
         if (pass) earned.push(award);
     });
@@ -3346,7 +3346,7 @@ function updateAwardPreview(idx, value, row) {
 
 function addAwardItem() {
     syncAwardEditorToSettings();
-    awardSettings.push({ id: 'custom_' + Date.now(), name: '새 뱃지', image: '🌟', bg: '#f5f3ff', color: '#7c3aed', alwaysShow: true });
+    awardSettings.push({ id: 'custom_' + Date.now(), name: '새 뱃지', image: '🌟', bg: '#f5f3ff', color: '#7c3aed', alwaysShow: false });
     renderAwardSettingList();
 }
 
