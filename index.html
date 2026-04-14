@@ -3156,39 +3156,70 @@
         const avgSleep = sleepDays > 0 ? (weekSleepTotal / sleepDays).toFixed(1) : 0;
         const avgCaffeine = (weekCaffeineTotal / 7).toFixed(0);
 
-        // ⭐ 카페인·수면 둘 다 3일 미만이면 분석 불가
-        if(caffeineDays < 3 && sleepDays < 3) {
-          const cafMsg = `카페인 ${caffeineDays}일`;
-          const slpMsg = `수면 ${sleepDays}일`;
+        // ⭐⭐⭐ 카페인 또는 수면 중 하나라도 3일 미만이면 분석 불가 (개별 체크)
+        if(caffeineDays < 3 || sleepDays < 3) {
+          const needCaffeine = caffeineDays < 3;
+          const needSleep    = sleepDays < 3;
+          const avgCafDisplay = caffeineDays > 0 ? Math.round(weekCaffeineTotal / caffeineDays) : 0;
+          const avgSlpDisplay = sleepDays > 0 ? (weekSleepTotal / sleepDays).toFixed(1) : 0;
+
+          // 필요한 추가 기록일 수
+          const cafNeed = Math.max(0, 3 - caffeineDays);
+          const slpNeed = Math.max(0, 3 - sleepDays);
+
+          // 현재 데이터 섹션 (있는 경우만)
+          const hasData = (caffeineDays > 0 || sleepDays > 0);
+          const currentDataHTML = hasData ? `
+            <div class="mt-3 p-3 bg-gray-50 rounded-xl text-left">
+              <p class="text-xs font-bold text-gray-500 mb-1">📊 현재까지의 데이터</p>
+              ${caffeineDays > 0 ? `<p class="text-xs text-gray-600">• 평균 카페인: <b>${avgCafDisplay}mg</b></p>` : ''}
+              ${sleepDays > 0   ? `<p class="text-xs text-gray-600">• 평균 수면: <b>${avgSlpDisplay}시간</b></p>` : ''}
+            </div>` : '';
+
           container.innerHTML = `
-            <div class="text-center py-6">
-              <div class="text-4xl mb-3">📊</div>
-              <p class="font-bold text-gray-700 mb-2">데이터가 부족해요</p>
-              <p class="text-sm text-gray-500 leading-relaxed">
-                AI 분석을 하려면 카페인 또는 수면 기록이<br>
-                <b>3일 이상</b> 필요합니다.<br><br>
-                현재: ${cafMsg} / ${slpMsg} 기록됨
-              </p>
+            <div class="py-4 px-2">
+              <div class="text-center mb-4">
+                <div class="text-3xl mb-2">📊</div>
+                <p class="font-bold text-gray-800 text-sm mb-1">건강 데이터 분석 불가</p>
+                <p class="text-xs text-gray-500">Gemini AI 건강 분석을 받으려면:</p>
+              </div>
+
+              <div class="space-y-2 mb-4">
+                <div class="flex items-center gap-2 p-2 rounded-lg ${needCaffeine ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}">
+                  <span class="text-base">☕</span>
+                  <div class="flex-1">
+                    <span class="text-xs font-bold ${needCaffeine ? 'text-red-700' : 'text-green-700'}">카페인 데이터</span>
+                    <span class="text-xs ${needCaffeine ? 'text-red-600' : 'text-green-600'}"> — 최소 3일 이상 필요</span>
+                  </div>
+                  <span class="text-sm font-bold ${needCaffeine ? 'text-red-600' : 'text-green-600'}">${caffeineDays}/7일 ${needCaffeine ? '❌' : '✅'}</span>
+                </div>
+                <div class="flex items-center gap-2 p-2 rounded-lg ${needSleep ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'}">
+                  <span class="text-base">😴</span>
+                  <div class="flex-1">
+                    <span class="text-xs font-bold ${needSleep ? 'text-red-700' : 'text-green-700'}">수면 데이터</span>
+                    <span class="text-xs ${needSleep ? 'text-red-600' : 'text-green-600'}"> — 최소 3일 이상 필요</span>
+                  </div>
+                  <span class="text-sm font-bold ${needSleep ? 'text-red-600' : 'text-green-600'}">${sleepDays}/7일 ${needSleep ? '❌' : '✅'}</span>
+                </div>
+              </div>
+
+              <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-left">
+                <p class="text-xs font-bold text-amber-700 mb-1">💪 필요한 기록</p>
+                ${needCaffeine ? `<p class="text-xs text-amber-700">• ☕ 카페인: <b>${cafNeed}일</b> 더 필요</p>` : '<p class="text-xs text-green-700">• ✅ 카페인: 충분함</p>'}
+                ${needSleep    ? `<p class="text-xs text-amber-700">• 😴 수면: <b>${slpNeed}일</b> 더 필요</p>`   : '<p class="text-xs text-green-700">• ✅ 수면: 충분함</p>'}
+              </div>
+
+              ${currentDataHTML}
+
+              <p class="text-xs text-gray-400 text-center mt-3">💡 카페인과 수면 각각 3일 이상 기록하면 AI 분석이 가능해요!</p>
             </div>`;
           btn.disabled = false;
           btn.innerHTML = '<i class="fa-solid fa-sparkles"></i> 분석하기';
           return;
         }
 
-        // ⭐ 한쪽 데이터가 부족한 경우 분석 전 안내 배너 표시
+        // ✅ 카페인·수면 둘 다 3일 이상 → AI 분석 진행
         let lackingNotice = '';
-        if(caffeineDays < 3) {
-          lackingNotice = `<div class="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
-            ⚠️ <b>카페인 기록 부족</b> (${caffeineDays}일) — 카페인 분석이 부정확할 수 있어요. 더 많이 기록할수록 정확해져요.
-          </div>`;
-        } else if(sleepDays < 3) {
-          lackingNotice = `<div class="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
-            ⚠️ <b>수면 기록 부족</b> (${sleepDays}일) — 수면 분석이 부정확할 수 있어요. 더 많이 기록할수록 정확해져요.
-          </div>`;
-        }
-        if(lackingNotice) {
-          container.innerHTML = lackingNotice + `<div class="flex items-center gap-2 text-blue-600"><i class="fa-solid fa-spinner fa-spin"></i><span class="text-sm font-semibold">Gemini AI가 ${periodText} 데이터를 분석하고 있습니다...</span></div>`;
-        }
 
         google.script.run
           .withSuccessHandler(response => {
