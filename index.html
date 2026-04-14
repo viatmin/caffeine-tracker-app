@@ -3656,9 +3656,12 @@
       google.script.run
         .withSuccessHandler(function(result) {
           if (result && result.success) {
-            badgeThresholds.habitStart = result.habitStart || 3;
-            badgeThresholds.streak     = result.streak     || 7;
-            badgeThresholds.monthly    = result.monthly    || 10;
+            badgeThresholds.habitStart     = result.habitStart     || 3;
+            badgeThresholds.streak         = result.streak         || 7;
+            badgeThresholds.monthly        = result.monthly        || 10;
+            badgeThresholds.habitStartName = result.habitStartName || '습관의 시작';
+            badgeThresholds.streakName     = result.streakName     || '꾸준한 습관';
+            badgeThresholds.monthlyName    = result.monthlyName    || '챌린지 달성';
             updateBadges(); // 새 기준으로 뱃지 즉시 갱신
           }
         })
@@ -4621,7 +4624,10 @@
       }
 
       // 🌱 습관의 시작 (N일 연속 기록 — 교사 설정값)
-      const habitN = badgeThresholds.habitStart || 3;
+      const habitN    = badgeThresholds.habitStart || 3;
+      const habitLabel  = (badgeThresholds.habitStartName || '습관의 시작').replace(/\s+/, '<br>');
+      const streakLabel = (badgeThresholds.streakName     || '꾸준한 습관').replace(/\s+/, '<br>');
+      const monthlyLabel= (badgeThresholds.monthlyName    || '챌린지 달성').replace(/\s+/, '<br>');
       const lastNDays = Array.from({length: habitN}, (_, n) => {
         const d = new Date(today + 'T00:00:00');
         d.setDate(d.getDate() - n);
@@ -4630,11 +4636,11 @@
       const habitStart = lastNDays.every(d => recordedDates.has(d));
       if (habitStart) {
         setBadge2Active('badge-habit-start','badge-habit-start-icon','badge-habit-start-label','badge-habit-start-sub',
-          '습관의<br>시작', `${habitN}일 연속 🌱`, 'bg-emerald-100', 'text-emerald-700');
+          habitLabel, `${habitN}일 연속 🌱`, 'bg-emerald-100', 'text-emerald-700');
       } else {
         const doneCount = lastNDays.filter(d => recordedDates.has(d)).length;
         setBadge2Inactive('badge-habit-start','badge-habit-start-icon','badge-habit-start-label','badge-habit-start-sub',
-          '습관의<br>시작', `${doneCount}/${habitN}일 기록`);
+          habitLabel, `${doneCount}/${habitN}일 기록`);
       }
 
       // 🏆 꾸준한 습관 (연속 N일+ — 교사 설정값)
@@ -4642,20 +4648,20 @@
       const streakActive = currentStreak >= streakN;
       if (streakActive) {
         setBadge2Active('badge-streak','badge-streak-icon','badge-streak-label','badge-streak-sub',
-          '꾸준한<br>습관', `연속 ${currentStreak}일 🔥`, 'bg-yellow-100', 'text-yellow-700');
+          streakLabel, `연속 ${currentStreak}일 🔥`, 'bg-yellow-100', 'text-yellow-700');
       } else {
         setBadge2Inactive('badge-streak','badge-streak-icon','badge-streak-label','badge-streak-sub',
-          '꾸준한<br>습관', `연속 ${currentStreak}일`);
+          streakLabel, `연속 ${currentStreak}일`);
       }
 
       // 🌟 월간 마스터 (N일 이상 — 교사 설정값)
       const monthlyN = badgeThresholds.monthly || 10;
       if (monthRecordCount >= monthlyN) {
         setBadge2Active('badge-monthly','badge-monthly-icon','badge-monthly-label','badge-monthly-sub',
-          '월간<br>마스터', `${monthRecordCount}일 기록 ✨`, 'bg-purple-100', 'text-purple-700');
+          monthlyLabel, `${monthRecordCount}일 기록 ✨`, 'bg-purple-100', 'text-purple-700');
       } else {
         setBadge2Inactive('badge-monthly','badge-monthly-icon','badge-monthly-label','badge-monthly-sub',
-          '월간<br>마스터', `${monthRecordCount}일 기록`);
+          monthlyLabel, `${monthRecordCount}일 기록`);
       }
 
       // ────────────────────────────────────────
