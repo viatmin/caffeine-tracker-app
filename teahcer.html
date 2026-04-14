@@ -46,6 +46,18 @@
         .filter-row{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
         .filter-select{padding:10px 16px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.3s;}
         .filter-select:hover,.filter-select:focus{border-color:#6366f1;outline:none;}
+        /* ── 멀티셀렉트 드롭다운 ── */
+        .ms-wrap{position:relative;display:inline-block;min-width:130px;}
+        .ms-btn{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:600;background:#fff;cursor:pointer;white-space:nowrap;transition:border-color .2s;user-select:none;min-width:110px;}
+        .ms-btn:hover,.ms-btn.open{border-color:#6366f1;}
+        .ms-btn .ms-arrow{font-size:10px;transition:transform .2s;flex-shrink:0;}
+        .ms-btn.open .ms-arrow{transform:rotate(180deg);}
+        .ms-panel{position:absolute;top:calc(100% + 4px);left:0;z-index:9999;background:#fff;border:2px solid #e5e7eb;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);min-width:140px;padding:6px 0;display:none;}
+        .ms-panel.open{display:block;}
+        .ms-item{display:flex;align-items:center;gap:8px;padding:7px 14px;cursor:pointer;font-size:13px;font-weight:500;transition:background .15s;}
+        .ms-item:hover{background:#f5f3ff;}
+        .ms-item input[type=checkbox]{width:14px;height:14px;accent-color:#6366f1;cursor:pointer;flex-shrink:0;}
+        .ms-item.all-item{border-bottom:1px solid #e5e7eb;margin-bottom:4px;font-weight:700;color:#6366f1;}
         .filter-buttons{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
         .filter-btn{padding:8px 16px;border:2px solid #e5e7eb;background:white;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.3s;display:flex;align-items:center;gap:6px;}
         .filter-btn:hover{border-color:#6366f1;}
@@ -517,9 +529,9 @@
     <div id="tab-overview" class="tab-content active">
         <div class="filter-bar">
             <label style="font-weight:600;color:#1f2937;">학년:</label>
-            <select id="gradeFilter" onchange="updateDashboard()"><option value="all">전체</option></select>
+            <div id="gradeFilter" class="ms-wrap"></div>
             <label style="font-weight:600;color:#1f2937;">반:</label>
-            <select id="classFilter" onchange="updateDashboard()"><option value="all">전체</option></select>
+            <div id="classFilter" class="ms-wrap"></div>
         </div>
         <div id="alerts"></div>
         <div class="stats-grid">
@@ -539,9 +551,9 @@
             <span style="font-weight:600;color:#1f2937;font-size:15px;">☕ 카페인 분석</span>
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                 <label style="font-size:13px;font-weight:600;color:#374151;">학년:</label>
-                <select id="cafGradeFilter" class="filter-select" style="padding:7px 12px;font-size:13px;" onchange="updateCaffeineTab()"><option value="all">전체</option></select>
+                <div id="cafGradeFilter" class="ms-wrap"></div>
                 <label style="font-size:13px;font-weight:600;color:#374151;">반:</label>
-                <select id="cafClassFilter" class="filter-select" style="padding:7px 12px;font-size:13px;" onchange="updateCaffeineTab()"><option value="all">전체</option></select>
+                <div id="cafClassFilter" class="ms-wrap"></div>
                 <label style="font-size:13px;font-weight:600;color:#374151;">📅 기준일:</label>
                 <input type="date" id="cafDateFilter" style="padding:7px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;" onchange="updateCaffeineTab()">
                 <span id="cafDateRangeLabel" style="font-size:12px;color:#6366f1;font-weight:600;background:#eef2ff;padding:4px 10px;border-radius:12px;"></span>
@@ -561,9 +573,9 @@
             <span style="font-weight:600;color:#1f2937;font-size:15px;">😴 수면 분석</span>
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
                 <label style="font-size:13px;font-weight:600;color:#374151;">학년:</label>
-                <select id="sleepGradeFilter" class="filter-select" style="padding:7px 12px;font-size:13px;" onchange="updateSleepTab()"><option value="all">전체</option></select>
+                <div id="sleepGradeFilter" class="ms-wrap"></div>
                 <label style="font-size:13px;font-weight:600;color:#374151;">반:</label>
-                <select id="sleepClassFilter" class="filter-select" style="padding:7px 12px;font-size:13px;" onchange="updateSleepTab()"><option value="all">전체</option></select>
+                <div id="sleepClassFilter" class="ms-wrap"></div>
                 <label style="font-size:13px;font-weight:600;color:#374151;">📅 기준일:</label>
                 <input type="date" id="sleepDateFilter" style="padding:7px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;" onchange="updateSleepTab()">
                 <span id="sleepDateRangeLabel" style="font-size:12px;color:#10b981;font-weight:600;background:#ecfdf5;padding:4px 10px;border-radius:12px;"></span>
@@ -584,8 +596,8 @@
             <!-- 검색·학년·반 -->
             <div class="student-filter-row" style="display:grid;grid-template-columns:1fr 180px 180px;gap:12px;align-items:center;margin-bottom:10px;">
                 <input type="text" id="studentSearchInput" class="filter-input" style="margin-bottom:0;" placeholder="학번, 이름으로 검색" oninput="filterStudents()">
-                <select id="studentGradeFilter" class="filter-select" onchange="filterStudents()"><option value="all">전체 학년</option></select>
-                <select id="studentClassFilter" class="filter-select" onchange="filterStudents()"><option value="all">전체 반</option></select>
+                <div id="studentGradeFilter" class="ms-wrap"></div>
+                <div id="studentClassFilter" class="ms-wrap"></div>
             </div>
             <!-- 기준일 한 줄 (항상 가로) -->
             <div class="student-date-filter" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:nowrap;overflow:hidden;">
@@ -1255,21 +1267,203 @@ function loadDataFromSheet(){
         })
         .getTeacherData();
 }
+// ══════════════════════════════════════════════════
+// 멀티셀렉트 드롭다운 컴포넌트
+// ══════════════════════════════════════════════════
+const _msInstances = {}; // id → MultiSelect 인스턴스
+
+class MultiSelect {
+    constructor(wrapperId, { placeholder = '전체', onChange = () => {} } = {}) {
+        this.id = wrapperId;
+        this.placeholder = placeholder;
+        this.onChange = onChange;
+        this.options = [];   // [{value, label}]
+        this.selected = new Set(['all']); // 기본: 전체
+        this.wrap = document.getElementById(wrapperId);
+        if (!this.wrap) return;
+        this._build();
+        _msInstances[wrapperId] = this;
+        // 외부 클릭 시 닫기
+        document.addEventListener('click', (e) => {
+            if (!this.wrap.contains(e.target)) this._close();
+        });
+    }
+
+    _build() {
+        this.wrap.innerHTML = '';
+        // 버튼
+        this.btn = document.createElement('div');
+        this.btn.className = 'ms-btn';
+        this.btn.innerHTML = `<span class="ms-label">${this.placeholder}</span><span class="ms-arrow">▼</span>`;
+        this.btn.addEventListener('click', (e) => { e.stopPropagation(); this._toggle(); });
+        // 패널
+        this.panel = document.createElement('div');
+        this.panel.className = 'ms-panel';
+        this.wrap.appendChild(this.btn);
+        this.wrap.appendChild(this.panel);
+    }
+
+    setOptions(opts) {
+        // opts: [{value, label}]
+        this.options = opts;
+        this.selected = new Set(['all']);
+        this._renderPanel();
+        this._updateLabel();
+    }
+
+    _renderPanel() {
+        this.panel.innerHTML = '';
+        // 전체 항목
+        const allItem = document.createElement('label');
+        allItem.className = 'ms-item all-item';
+        allItem.innerHTML = `<input type="checkbox" value="all" checked> 전체`;
+        allItem.querySelector('input').addEventListener('change', () => this._onAllChange());
+        this.panel.appendChild(allItem);
+        // 개별 항목
+        this.options.forEach(opt => {
+            const item = document.createElement('label');
+            item.className = 'ms-item';
+            const chk = document.createElement('input');
+            chk.type = 'checkbox';
+            chk.value = opt.value;
+            chk.addEventListener('change', () => this._onItemChange(opt.value, chk.checked));
+            item.appendChild(chk);
+            item.appendChild(document.createTextNode(' ' + opt.label));
+            this.panel.appendChild(item);
+        });
+    }
+
+    _onAllChange() {
+        this.selected = new Set(['all']);
+        this._syncCheckboxes();
+        this._updateLabel();
+        this.onChange();
+    }
+
+    _onItemChange(value, checked) {
+        if (checked) {
+            this.selected.delete('all');
+            this.selected.add(value);
+        } else {
+            this.selected.delete(value);
+            if (this.selected.size === 0) this.selected.add('all');
+        }
+        this._syncCheckboxes();
+        this._updateLabel();
+        this.onChange();
+    }
+
+    _syncCheckboxes() {
+        this.panel.querySelectorAll('input[type=checkbox]').forEach(chk => {
+            chk.checked = this.selected.has(chk.value);
+        });
+    }
+
+    _updateLabel() {
+        const labelEl = this.btn.querySelector('.ms-label');
+        if (!labelEl) return;
+        if (this.selected.has('all') || this.selected.size === 0) {
+            labelEl.textContent = this.placeholder;
+        } else {
+            const arr = [...this.selected];
+            const first = this.options.find(o => o.value === arr[0]);
+            const firstName = first ? first.label : arr[0];
+            labelEl.textContent = arr.length === 1 ? firstName : `${firstName} 외 ${arr.length - 1}`;
+        }
+    }
+
+    _toggle() {
+        const isOpen = this.panel.classList.contains('open');
+        // 다른 패널 모두 닫기
+        document.querySelectorAll('.ms-panel.open').forEach(p => {
+            p.classList.remove('open');
+            p.previousElementSibling?.classList.remove('open');
+        });
+        if (!isOpen) {
+            this.panel.classList.add('open');
+            this.btn.classList.add('open');
+        }
+    }
+
+    _close() {
+        this.panel.classList.remove('open');
+        this.btn.classList.remove('open');
+    }
+
+    // null이면 전체, Set이면 선택된 값들
+    getSelected() {
+        if (this.selected.has('all') || this.selected.size === 0) return null;
+        return this.selected;
+    }
+
+    reset() {
+        this.selected = new Set(['all']);
+        this._syncCheckboxes();
+        this._updateLabel();
+    }
+}
+
+// 멀티셀렉트 값 가져오기 헬퍼 (null=전체, Set=선택)
+function msGet(id) {
+    return _msInstances[id] ? _msInstances[id].getSelected() : null;
+}
+
+// 학년 레이블: 숫자면 "N학년", 아니면 그대로
+function gradeLabel(g) { return /^\d+$/.test(String(g)) ? g + '학년' : String(g); }
+// 반 레이블: 숫자면 "N반", 아니면 그대로
+function classLabel(c) { return /^\d+$/.test(String(c)) ? c + '반' : String(c); }
+
 function initFilters(){
-    const gradeIds=['gradeFilter','studentGradeFilter','cafGradeFilter','sleepGradeFilter'];
-    const classIds=['classFilter','studentClassFilter','cafClassFilter','sleepClassFilter'];
-    gradeIds.forEach(id=>{const s=document.getElementById(id);if(s){while(s.options.length>1)s.remove(1);}});
-    classIds.forEach(id=>{const s=document.getElementById(id);if(s){while(s.options.length>1)s.remove(1);}});
-    [...new Set(studentsData.map(s=>s.학년))].sort().forEach(g=>{gradeIds.forEach(id=>{const s=document.getElementById(id);if(s){const o=document.createElement('option');o.value=g;o.textContent=g+'학년';s.appendChild(o);}});});
-    [...new Set(studentsData.map(s=>s.반))].sort().forEach(c=>{classIds.forEach(id=>{const s=document.getElementById(id);if(s){const o=document.createElement('option');o.value=c;o.textContent=c+'반';s.appendChild(o);}});});
+    const gradeIds = ['gradeFilter','studentGradeFilter','cafGradeFilter','sleepGradeFilter'];
+    const classIds = ['classFilter','studentClassFilter','cafClassFilter','sleepClassFilter'];
+
+    // 고유 학년/반 목록 (정렬: 숫자 → 문자)
+    const grades = [...new Set(studentsData.map(s => s.학년))].sort((a, b) => {
+        const na = parseInt(a), nb = parseInt(b);
+        if (!isNaN(na) && !isNaN(nb)) return na - nb;
+        if (!isNaN(na)) return -1;
+        if (!isNaN(nb)) return 1;
+        return String(a).localeCompare(String(b));
+    });
+    const classes = [...new Set(studentsData.map(s => s.반))].sort((a, b) => {
+        const na = parseInt(a), nb = parseInt(b);
+        if (!isNaN(na) && !isNaN(nb)) return na - nb;
+        if (!isNaN(na)) return -1;
+        if (!isNaN(nb)) return 1;
+        return String(a).localeCompare(String(b));
+    });
+
+    const gradeOpts = grades.map(g => ({ value: g, label: gradeLabel(g) }));
+    const classOpts = classes.map(c => ({ value: c, label: classLabel(c) }));
+
+    gradeIds.forEach(id => {
+        if (!_msInstances[id]) new MultiSelect(id, { placeholder: '전체 학년', onChange: () => {
+            if (id === 'gradeFilter') updateDashboard();
+            else if (id === 'cafGradeFilter') updateCaffeineTab();
+            else if (id === 'sleepGradeFilter') updateSleepTab();
+            else filterStudents();
+        }});
+        _msInstances[id].setOptions(gradeOpts);
+    });
+
+    classIds.forEach(id => {
+        if (!_msInstances[id]) new MultiSelect(id, { placeholder: '전체 반', onChange: () => {
+            if (id === 'classFilter') updateDashboard();
+            else if (id === 'cafClassFilter') updateCaffeineTab();
+            else if (id === 'sleepClassFilter') updateSleepTab();
+            else filterStudents();
+        }});
+        _msInstances[id].setOptions(classOpts);
+    });
+
     // 분석 탭 날짜 초기화
     ['cafDateFilter','sleepDateFilter'].forEach(id=>{const el=document.getElementById(id);if(el){el.value=today;el.max=today;}});
 }
 function switchTab(n,el){document.querySelectorAll('.tab-button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));if(el)el.classList.add('active');document.getElementById('tab-'+n).classList.add('active');if(n==='inquiries'){inquiryFilter='unanswered';loadInquiries();}if(n==='awards'){renderAwardsTab();}}
 
 function updateDashboard(){
-    const g=document.getElementById('gradeFilter').value,c=document.getElementById('classFilter').value;
-    let f=studentsData;if(g!=='all')f=f.filter(s=>s.학년===g);if(c!=='all')f=f.filter(s=>s.반===c);
+    const g=msGet('gradeFilter'), c=msGet('classFilter');
+    let f=studentsData;if(g)f=f.filter(s=>g.has(s.학년));if(c)f=f.filter(s=>c.has(s.반));
     const dates7=getLast7Dates(today);
     let nr=0,cw=0,sw=0;
     f.forEach(s=>{
@@ -1307,18 +1501,16 @@ function updateDashboard(){
 }
 
 function getCafTabFilter(){
-    const g=document.getElementById('cafGradeFilter');
-    const c=document.getElementById('cafClassFilter');
     const d=document.getElementById('cafDateFilter');
-    const gv=g?g.value:'all', cv=c?c.value:'all';
+    const gv=msGet('cafGradeFilter'), cv=msGet('cafClassFilter');
     const baseDate=d&&d.value?d.value:today;
     const dates=getLast7Dates(baseDate);
     // 범위 레이블 업데이트
     const lbl=document.getElementById('cafDateRangeLabel');
     if(lbl)lbl.textContent=dates[0].substring(5)+' ~ '+dates[6].substring(5);
     let students=studentsData;
-    if(gv!=='all')students=students.filter(s=>s.학년===gv);
-    if(cv!=='all')students=students.filter(s=>s.반===cv);
+    if(gv)students=students.filter(s=>gv.has(s.학년));
+    if(cv)students=students.filter(s=>cv.has(s.반));
     const ids=new Set(students.map(s=>s.학번));
     const filteredCaf=caffeineData.filter(c=>ids.has(c.학번));
     return{students,dates,filteredCaf,ids};
@@ -1381,17 +1573,15 @@ function updateCaffeineTab(){
     });
 }
 function getSleepTabFilter(){
-    const g=document.getElementById('sleepGradeFilter');
-    const c=document.getElementById('sleepClassFilter');
     const d=document.getElementById('sleepDateFilter');
-    const gv=g?g.value:'all', cv=c?c.value:'all';
+    const gv=msGet('sleepGradeFilter'), cv=msGet('sleepClassFilter');
     const baseDate=d&&d.value?d.value:today;
     const dates=getLast7Dates(baseDate);
     const lbl=document.getElementById('sleepDateRangeLabel');
     if(lbl)lbl.textContent=dates[0].substring(5)+' ~ '+dates[6].substring(5);
     let students=studentsData;
-    if(gv!=='all')students=students.filter(s=>s.학년===gv);
-    if(cv!=='all')students=students.filter(s=>s.반===cv);
+    if(gv)students=students.filter(s=>gv.has(s.학년));
+    if(cv)students=students.filter(s=>cv.has(s.반));
     const ids=new Set(students.map(s=>s.학번));
     const filteredSleep=sleepData.filter(s=>ids.has(s.학번)&&dates.includes(s.날짜));
     return{students,dates,filteredSleep,ids};
@@ -1468,8 +1658,8 @@ function resetStudentDate(){
 }
 function filterStudents(){
     const sv=document.getElementById('studentSearchInput').value.toLowerCase();
-    const gv=document.getElementById('studentGradeFilter').value,cv=document.getElementById('studentClassFilter').value;
-    let f=studentsData;if(gv!=='all')f=f.filter(s=>s.학년===gv);if(cv!=='all')f=f.filter(s=>s.반===cv);
+    const gv=msGet('studentGradeFilter'), cv=msGet('studentClassFilter');
+    let f=studentsData;if(gv)f=f.filter(s=>gv.has(s.학년));if(cv)f=f.filter(s=>cv.has(s.반));
     if(sv)f=f.filter(s=>s.학번.includes(sv)||s.이름.includes(sv));
     const fd=getStudentFilterDate();
     const d7=getLast7Dates(fd);
