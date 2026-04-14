@@ -1109,6 +1109,7 @@
           startAutoRefresh();
           setTimeout(checkReplyBubble, 1500);
           setTimeout(checkTeacherAwards, 2000);
+          setTimeout(loadBadgeThresholds, 2500);
 
           // ⭐ 분석 중이면 GAS 호출 계열(loadCaffeineLogs, loadSleepLogs, refreshData, loadCaffeineDbFromGAS)을
           //    분석 완료까지 대기 후 실행 (최대 30초 폴링)
@@ -3648,6 +3649,25 @@
       } catch(e) {}
     }
 
+    // ── 뱃지 임계값 (교사 설정값, GAS에서 로드) ──────────────
+    var badgeThresholds = { habitStart: 3, streak: 7, monthly: 10 };
+
+    function loadBadgeThresholds() {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result && result.success) {
+            badgeThresholds.habitStart = result.habitStart || 3;
+            badgeThresholds.streak     = result.streak     || 7;
+            badgeThresholds.monthly    = result.monthly    || 10;
+            updateBadges(); // 새 기준으로 뱃지 즉시 갱신
+          }
+        })
+        .withFailureHandler(function(err) {
+          console.warn('[뱃지임계값] 로드 실패, 기본값 사용:', err);
+        })
+        .getBadgeThresholds();
+    }
+
     // ── GAS에서 교사 수여 뱃지 가져오기 ──────────────────
     function checkTeacherAwards() {
       if (!user || !user.studentId) return;
@@ -4600,24 +4620,26 @@
           '수면<br>오늘 기록', '');
       }
 
-      // 🌱 습관의 시작 (3일 연속 기록)
-      const last3Days = [0, 1, 2].map(n => {
+      // 🌱 습관의 시작 (N일 연속 기록 — 교사 설정값)
+      const habitN = badgeThresholds.habitStart || 3;
+      const lastNDays = Array.from({length: habitN}, (_, n) => {
         const d = new Date(today + 'T00:00:00');
         d.setDate(d.getDate() - n);
         return d.toISOString().split('T')[0];
       });
-      const habitStart = last3Days.every(d => recordedDates.has(d));
+      const habitStart = lastNDays.every(d => recordedDates.has(d));
       if (habitStart) {
         setBadge2Active('badge-habit-start','badge-habit-start-icon','badge-habit-start-label','badge-habit-start-sub',
-          '습관의<br>시작', '3일 연속 🌱', 'bg-emerald-100', 'text-emerald-700');
+          '습관의<br>시작', `${habitN}일 연속 🌱`, 'bg-emerald-100', 'text-emerald-700');
       } else {
-        const doneCount = last3Days.filter(d => recordedDates.has(d)).length;
+        const doneCount = lastNDays.filter(d => recordedDates.has(d)).length;
         setBadge2Inactive('badge-habit-start','badge-habit-start-icon','badge-habit-start-label','badge-habit-start-sub',
-          '습관의<br>시작', `${doneCount}/3일 기록`);
+          '습관의<br>시작', `${doneCount}/${habitN}일 기록`);
       }
 
-      // 🏆 꾸준한 습관 (연속 7일+, 3일 공백 시 소멸 경고)
-      const streakActive = currentStreak >= 7;
+      // 🏆 꾸준한 습관 (연속 N일+ — 교사 설정값)
+      const streakN = badgeThresholds.streak || 7;
+      const streakActive = currentStreak >= streakN;
       if (streakActive) {
         setBadge2Active('badge-streak','badge-streak-icon','badge-streak-label','badge-streak-sub',
           '꾸준한<br>습관', `연속 ${currentStreak}일 🔥`, 'bg-yellow-100', 'text-yellow-700');
@@ -4626,8 +4648,9 @@
           '꾸준한<br>습관', `연속 ${currentStreak}일`);
       }
 
-      // 🌟 월간 마스터
-      if (monthRecordCount >= 20) {
+      // 🌟 월간 마스터 (N일 이상 — 교사 설정값)
+      const monthlyN = badgeThresholds.monthly || 10;
+      if (monthRecordCount >= monthlyN) {
         setBadge2Active('badge-monthly','badge-monthly-icon','badge-monthly-label','badge-monthly-sub',
           '월간<br>마스터', `${monthRecordCount}일 기록 ✨`, 'bg-purple-100', 'text-purple-700');
       } else {
@@ -4677,12 +4700,12 @@
         if (parts.length > 0) {
           infoEl.textContent = '오늘 아직: ' + parts.join(', ') + ' 남았어요';
         } else if (!habitStart) {
-          const doneCount = last3Days.filter(d => recordedDates.has(d)).length;
-          infoEl.textContent = `연속 ${doneCount}일 / 3일 달성하면 🌱 습관의 시작 활성화`;
+          const doneCount = lastNDays.filter(d => recordedDates.has(d)).length;
+          infoEl.textContent = `연속 ${doneCount}일 / ${habitN}일 달성하면 🌱 습관의 시작 활성화`;
         } else if (!streakActive) {
-          infoEl.textContent = `연속 ${currentStreak}일 / 7일 달성하면 🏆 활성화`;
-        } else if (monthRecordCount < 20) {
-          infoEl.textContent = `이번 달 ${monthRecordCount}일 / 20일 달성하면 🌟 활성화`;
+          infoEl.textContent = `연속 ${currentStreak}일 / ${streakN}일 달성하면 🏆 활성화`;
+        } else if (monthRecordCount < monthlyN) {
+          infoEl.textContent = `이번 달 ${monthRecordCount}일 / ${monthlyN}일 달성하면 🌟 활성화`;
         } else {
           infoEl.textContent = '모든 뱃지 달성! 오늘도 건강한 하루 💪';
         }
