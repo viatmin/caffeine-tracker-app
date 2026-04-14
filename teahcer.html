@@ -592,7 +592,7 @@
     <!-- 학생 목록 -->
     <div id="tab-students" class="tab-content">
         <div class="student-filter-section">
-            <h3 class="filter-title">🔍 학생 필터</h3>
+            <h3 class="filter-title">🔍 학생 필터 <span id="studentFilterCount" style="margin-left:8px;font-size:13px;font-weight:600;color:#6366f1;background:#eef2ff;padding:3px 10px;border-radius:12px;"></span></h3>
             <!-- 검색·학년·반 -->
             <div class="student-filter-row" style="display:grid;grid-template-columns:1fr 180px 180px;gap:12px;align-items:center;margin-bottom:10px;">
                 <input type="text" id="studentSearchInput" class="filter-input" style="margin-bottom:0;" placeholder="학번, 이름으로 검색" oninput="filterStudents()">
@@ -1413,6 +1413,11 @@ function normalizeGrade(g) {
     const s = String(g ?? '').trim();
     return (s && /^[1-9]\d*$/.test(s)) ? s : '교직원';
 }
+// 반 정규화: 양의 정수가 아닌 모든 값(빈 칸, 교직원 등) → "교직원"
+function normalizeClass(c) {
+    const s = String(c ?? '').trim();
+    return (s && /^[1-9]\d*$/.test(s)) ? s : '교직원';
+}
 // 학년 레이블: 숫자면 "N학년", 아니면 그대로
 function gradeLabel(g) { return /^\d+$/.test(String(g)) ? g + '학년' : String(g); }
 // 반 레이블: 숫자면 "N반", 아니면 그대로
@@ -1430,7 +1435,7 @@ function initFilters(){
         if (!isNaN(nb)) return 1;
         return String(a).localeCompare(String(b));
     });
-    const classes = [...new Set(studentsData.map(s => s.반))].sort((a, b) => {
+    const classes = [...new Set(studentsData.map(s => normalizeClass(s.반)))].sort((a, b) => {
         const na = parseInt(a), nb = parseInt(b);
         if (!isNaN(na) && !isNaN(nb)) return na - nb;
         if (!isNaN(na)) return -1;
@@ -1468,7 +1473,7 @@ function switchTab(n,el){document.querySelectorAll('.tab-button').forEach(b=>b.c
 
 function updateDashboard(){
     const g=msGet('gradeFilter'), c=msGet('classFilter');
-    let f=studentsData;if(g)f=f.filter(s=>g.has(normalizeGrade(s.학년)));if(c)f=f.filter(s=>c.has(s.반));
+    let f=studentsData;if(g)f=f.filter(s=>g.has(normalizeGrade(s.학년)));if(c)f=f.filter(s=>c.has(normalizeClass(s.반)));
     const dates7=getLast7Dates(today);
     let nr=0,cw=0,sw=0;
     f.forEach(s=>{
@@ -1515,7 +1520,7 @@ function getCafTabFilter(){
     if(lbl)lbl.textContent=dates[0].substring(5)+' ~ '+dates[6].substring(5);
     let students=studentsData;
     if(gv)students=students.filter(s=>gv.has(normalizeGrade(s.학년)));
-    if(cv)students=students.filter(s=>cv.has(s.반));
+    if(cv)students=students.filter(s=>cv.has(normalizeClass(s.반)));
     const ids=new Set(students.map(s=>s.학번));
     const filteredCaf=caffeineData.filter(c=>ids.has(c.학번));
     return{students,dates,filteredCaf,ids};
@@ -1586,7 +1591,7 @@ function getSleepTabFilter(){
     if(lbl)lbl.textContent=dates[0].substring(5)+' ~ '+dates[6].substring(5);
     let students=studentsData;
     if(gv)students=students.filter(s=>gv.has(normalizeGrade(s.학년)));
-    if(cv)students=students.filter(s=>cv.has(s.반));
+    if(cv)students=students.filter(s=>cv.has(normalizeClass(s.반)));
     const ids=new Set(students.map(s=>s.학번));
     const filteredSleep=sleepData.filter(s=>ids.has(s.학번)&&dates.includes(s.날짜));
     return{students,dates,filteredSleep,ids};
@@ -1991,6 +1996,8 @@ function getRecentSleep(id){
 }
 function renderStudentGrid(students){
     const grid=document.getElementById('studentGrid');
+    const countEl=document.getElementById('studentFilterCount');
+    if(countEl) countEl.textContent = students.length + '명';
     if(!students.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:60px;color:#9ca3af;">해당 학생이 없습니다.</div>';return;}
     grid.innerHTML='';
     // ⭐ 학번 오름차순 정렬 (숫자형 학번도 올바르게 정렬)
