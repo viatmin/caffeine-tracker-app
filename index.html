@@ -2875,16 +2875,25 @@
         const oldAmount = oldLog ? oldLog.amount : 0;
         const index = caffeineLogs.findIndex(l => l.id === editingId);
         if(index !== -1) caffeineLogs[index] = { ...caffeineLogs[index], name, amount, time, reason };
+
+        // ⭐ 로컬 업데이트 직후 오늘 합계를 직접 계산
+        // showCaffeineWarning(amount) 방식은 내부에서 합계+amount를 이중 합산하므로
+        // totalOverride로 정확한 값을 전달
+        const _editToday = getTodayKST();
+        const _editNewTotal = caffeineLogs
+          .filter(l => getLogDateKST(l.time) === _editToday)
+          .reduce((sum, l) => sum + (l.amount || 0), 0);
+
         google.script.run
           .withSuccessHandler(() => {
             showSaveCompleteModal('카페인 기록이 수정되었습니다.');
             closeEditModal(); loadCaffeineLogs(); refreshData();
-            if(amount !== oldAmount) setTimeout(() => { showCaffeineWarning(amount); }, 500);
+            if(amount !== oldAmount) setTimeout(() => { showCaffeineWarning(amount, _editNewTotal); }, 500);
           })
           .withFailureHandler(err => {
             showSaveCompleteModal('기록이 수정되었습니다.\n(로컬에만 저장됨)');
             closeEditModal(); loadCaffeineLogs(); refreshData();
-            if(amount !== oldAmount) setTimeout(() => { showCaffeineWarning(amount); }, 500);
+            if(amount !== oldAmount) setTimeout(() => { showCaffeineWarning(amount, _editNewTotal); }, 500);
           })
           .updateCaffeineData({ id: editingId, studentId: user.studentId, name: user.name, drink: name, mg: amount, time, reason });
           
