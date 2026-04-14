@@ -180,31 +180,7 @@
 </head>
 <body class="pb-24">
 
-  <!-- ⭐ 앱 업데이트 새로고침 안내 배너 -->
-  <div id="updateNoticeBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;
-    background:linear-gradient(90deg,#4f46e5,#7c3aed);color:#fff;
-    align-items:center;justify-content:space-between;gap:8px;
-    padding:10px 14px;box-shadow:0 2px 12px rgba(79,70,229,.4);font-family:'Pretendard',sans-serif;">
-    <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;">
-      <span style="font-size:18px;flex-shrink:0;">🔄</span>
-      <div style="min-width:0;">
-        <p style="margin:0;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">앱이 업데이트됐어요!</p>
-        <p style="margin:0;font-size:11px;opacity:.85;">새로고침하면 최신 버전을 사용할 수 있어요.</p>
-      </div>
-    </div>
-    <div style="display:flex;gap:6px;flex-shrink:0;">
-      <button onclick="location.reload(true)"
-        style="background:#fff;color:#4f46e5;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;">
-        새로고침
-      </button>
-      <button onclick="document.getElementById('updateNoticeBanner').style.display='none'"
-        style="background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;">
-        ✕
-      </button>
-    </div>
-  </div>
-
-
+  <!-- 로그인 화면 -->
   <div id="loginPage" class="min-h-screen flex items-center justify-center p-6 bg-white">
     <div class="w-full max-w-sm text-center">
       <div class="mb-10">
@@ -999,20 +975,6 @@
   </div><!-- /mainApp -->
 
   <script>
-    // ⭐ 앱 버전 관리 — 코드 업데이트 시 이 숫자만 올리면 학생에게 새로고침 안내가 뜹니다
-    const APP_VERSION = '1.1.0';
-
-    (function checkAppVersion() {
-      try {
-        const saved = localStorage.getItem('app_version');
-        if (saved && saved !== APP_VERSION) {
-          // 버전이 다르면 → 새로고침 배너 예약 (DOM 준비 후 표시)
-          window._showUpdateBanner = true;
-        }
-        localStorage.setItem('app_version', APP_VERSION);
-      } catch(e) {}
-    })();
-
     let user = null;
     let selectedDrink = { drink: '', mg: 0 };
     let selectedCondition = { emoji: '', score: 0 };
@@ -3171,13 +3133,8 @@
         startDate = new Date();
         startDate.setDate(startDate.getDate() - 6);
       }
-      // ⭐ toISOString()은 UTC 기준이라 KST(+9h)에서 날짜가 하루 밀릴 수 있음 → KST 기준으로 직접 포맷
-      const toKSTDateStr = (d) => {
-        const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-        return kst.toISOString().split('T')[0];
-      };
-      const startDateStr = toKSTDateStr(startDate);
-      const endDateStr   = toKSTDateStr(endDate);
+      const startDateStr = startDate.toISOString().split('T')[0];
+      const endDateStr = endDate.toISOString().split('T')[0];
       const formatDate = (d) => `${d.getMonth() + 1}/${d.getDate()}`;
       const periodText = `${formatDate(startDate)} ~ ${formatDate(endDate)}`;
       window.currentAnalysisPeriod = { start: startDateStr, end: endDateStr, text: periodText };
@@ -3188,11 +3145,8 @@
         let weekCaffeineTotal = 0, weekSleepTotal = 0, sleepDays = 0;
         const caffeineDates = new Set();
         caffeineLogs.forEach(log => {
-          // log.time은 서버에서 "yyyy-MM-dd HH:mm:ss" 형식으로 내려옴
-          // getLogDateKST()는 UTC 보정 과정에서 날짜가 바뀔 수 있으므로
-          // 앞 10자리를 직접 잘라 날짜를 구함
-          const logDate = (log.time || '').slice(0, 10);
-          if(logDate && logDate >= startDateStr && logDate <= endDateStr) {
+          const logDate = getLogDateKST(log.time);
+          if(logDate >= startDateStr && logDate <= endDateStr) {
             weekCaffeineTotal += log.amount;
             caffeineDates.add(logDate);
           }
@@ -3209,11 +3163,9 @@
           const avgCafDisplay = caffeineDays > 0 ? Math.round(weekCaffeineTotal / caffeineDays) : 0;
           const avgSlpDisplay = sleepDays > 0 ? (weekSleepTotal / sleepDays).toFixed(1) : 0;
 
-          // 필요한 추가 기록일 수
           const cafNeed = Math.max(0, 3 - caffeineDays);
           const slpNeed = Math.max(0, 3 - sleepDays);
 
-          // 현재 데이터 섹션 (있는 경우만)
           const hasData = (caffeineDays > 0 || sleepDays > 0);
           const currentDataHTML = hasData ? `
             <div class="mt-3 p-3 bg-gray-50 rounded-xl text-left">
@@ -4007,16 +3959,6 @@
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('sid').addEventListener('keypress', (e) => { if(e.key === 'Enter') document.getElementById('sname').focus(); });
       document.getElementById('sname').addEventListener('keypress', (e) => { if(e.key === 'Enter') login(); });
-
-      // ⭐ 앱 업데이트 새로고침 배너 표시
-      if (window._showUpdateBanner) {
-        const banner = document.getElementById('updateNoticeBanner');
-        if (banner) {
-          banner.style.display = 'flex';
-          // 15초 후 자동 숨김
-          setTimeout(() => { banner.style.display = 'none'; }, 15000);
-        }
-      }
 
       quickMenuCategories = QM_DEFAULT();
       initQuickMenuEditor();
