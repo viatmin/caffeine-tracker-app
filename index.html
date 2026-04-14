@@ -1364,7 +1364,14 @@
           const selectedDrinkEl = document.getElementById('selectedDrink');
           if(selectedDrinkEl) selectedDrinkEl.innerText = '음료를 선택하거나 직접 입력해주세요';
           selectedDrink = { drink: '', mg: 0 };
-          loadCaffeineLogs(amount);
+          // ⭐ 오늘 날짜 기록일 때만 섭취 경고 모달 표시
+          // 과거 날짜 기록은 저장 완료 모달만 표시
+          if(getLogDateKST(time) === getTodayKST()) {
+            loadCaffeineLogs(amount);
+          } else {
+            showSaveCompleteModal('✅ 카페인 기록이 저장되었습니다.');
+            loadCaffeineLogs();
+          }
           refreshData();
         })
         .withFailureHandler(err => {
@@ -3044,7 +3051,8 @@
     function showCaffeineWarning(addedAmount, totalOverride) {
       const today = getTodayKST();
       let todayTotal = 0;
-      if(totalOverride !== undefined && totalOverride > 0) {
+      // totalOverride: 편집 시 이미 정확히 계산된 합계값을 직접 사용 (>= 0 허용)
+      if(totalOverride !== undefined) {
         todayTotal = totalOverride;
       } else {
         caffeineLogs.forEach(log => { if(getLogDateKST(log.time) === today) todayTotal += log.amount; });
@@ -3135,17 +3143,61 @@
       container.innerHTML = `<div class="flex items-center gap-2 text-blue-600"><i class="fa-solid fa-spinner fa-spin"></i><span class="text-sm font-semibold">Gemini AI가 ${periodText} 데이터를 분석하고 있습니다...</span></div>`;
       try {
         let weekCaffeineTotal = 0, weekSleepTotal = 0, sleepDays = 0;
-        caffeineLogs.forEach(log => { const logDate = getLogDateKST(log.time); if(logDate >= startDateStr && logDate <= endDateStr) weekCaffeineTotal += log.amount; });
+        const caffeineDates = new Set();
+        caffeineLogs.forEach(log => {
+          const logDate = getLogDateKST(log.time);
+          if(logDate >= startDateStr && logDate <= endDateStr) {
+            weekCaffeineTotal += log.amount;
+            caffeineDates.add(logDate);
+          }
+        });
+        const caffeineDays = caffeineDates.size;
         sleepLogs.forEach(log => { if(log.date >= startDateStr && log.date <= endDateStr) { weekSleepTotal += log.hours; sleepDays++; } });
         const avgSleep = sleepDays > 0 ? (weekSleepTotal / sleepDays).toFixed(1) : 0;
         const avgCaffeine = (weekCaffeineTotal / 7).toFixed(0);
+
+        // ⭐ 카페인·수면 둘 다 3일 미만이면 분석 불가
+        if(caffeineDays < 3 && sleepDays < 3) {
+          const cafMsg = `카페인 ${caffeineDays}일`;
+          const slpMsg = `수면 ${sleepDays}일`;
+          container.innerHTML = `
+            <div class="text-center py-6">
+              <div class="text-4xl mb-3">📊</div>
+              <p class="font-bold text-gray-700 mb-2">데이터가 부족해요</p>
+              <p class="text-sm text-gray-500 leading-relaxed">
+                AI 분석을 하려면 카페인 또는 수면 기록이<br>
+                <b>3일 이상</b> 필요합니다.<br><br>
+                현재: ${cafMsg} / ${slpMsg} 기록됨
+              </p>
+            </div>`;
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-sparkles"></i> 분석하기';
+          return;
+        }
+
+        // ⭐ 한쪽 데이터가 부족한 경우 분석 전 안내 배너 표시
+        let lackingNotice = '';
+        if(caffeineDays < 3) {
+          lackingNotice = `<div class="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
+            ⚠️ <b>카페인 기록 부족</b> (${caffeineDays}일) — 카페인 분석이 부정확할 수 있어요. 더 많이 기록할수록 정확해져요.
+          </div>`;
+        } else if(sleepDays < 3) {
+          lackingNotice = `<div class="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
+            ⚠️ <b>수면 기록 부족</b> (${sleepDays}일) — 수면 분석이 부정확할 수 있어요. 더 많이 기록할수록 정확해져요.
+          </div>`;
+        }
+        if(lackingNotice) {
+          container.innerHTML = lackingNotice + `<div class="flex items-center gap-2 text-blue-600"><i class="fa-solid fa-spinner fa-spin"></i><span class="text-sm font-semibold">Gemini AI가 ${periodText} 데이터를 분석하고 있습니다...</span></div>`;
+        }
+
         google.script.run
           .withSuccessHandler(response => {
             if (response.success) {
               if (response.errorCode && response.source && response.source.startsWith('Fallback')) {
                 showFallbackNotice(response.errorCode);
               }
-              displayAIReport(response.analysis, periodText);
+              // 부족 데이터 배너는 AI 결과 위에 유지
+              displayAIReport(response.analysis, periodText, lackingNotice);
             } else {
               showErrorReport(response.error, response.errorCode);
             }
@@ -3165,7 +3217,7 @@
       }
     }
     
-    function displayAIReport(analysis, periodText) {
+    function displayAIReport(analysis, periodText, lackingNotice) {
       const container = document.getElementById('aiReportContainer');
       if(!container) return;
       window.currentAIAnalysis = analysis;
@@ -3188,7 +3240,7 @@
           .replace(/^---$/gm, '<hr class="my-2 border-gray-200">');
       }
       const formattedAnalysis = formatMarkdown(analysis);
-      container.innerHTML = `
+      container.innerHTML = (lackingNotice || '') + `
         <div class="space-y-3">
           <div class="flex items-center justify-between mb-2 pb-2 border-b border-gray-200">
             <div class="flex items-center gap-2 text-xs text-gray-500">
@@ -5105,8 +5157,9 @@ function tutRenderStep() {
 }
 
 function tutPositionAll(el, pos) {
-  // 요소가 보이도록 스크롤
-  el.scrollIntoView({ behavior:'smooth', block:'center' });
+  // 요소가 보이도록 스크롤 (즉시 이동 — smooth는 모바일에서 위치 계산 오류 유발)
+  try { el.scrollIntoView({ behavior:'instant', block:'center' }); }
+  catch(e) { el.scrollIntoView(true); }
 
   setTimeout(() => {
     const rect = el.getBoundingClientRect();
