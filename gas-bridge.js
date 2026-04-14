@@ -32,20 +32,21 @@
    * @param {Array}  params  - 함수 인자 배열
    */
   async function _callGAS(action, params) {
-    const url = global.GAS_API_URL;
-    if (!url) {
+    const baseUrl = global.GAS_API_URL;
+    if (!baseUrl) {
       throw new Error('[gas-bridge] window.GAS_API_URL 이 설정되지 않았습니다.');
     }
 
     console.log('[gas-bridge] 호출:', action, params);
 
-    const res = await fetch(url, {
-      method: 'POST',
-      // GAS는 application/json Content-Type을 인식하지 못하므로
-      // text/plain으로 전송하고 GAS에서 JSON.parse 처리
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action, params }),
-      // redirect: 'follow' — GAS 웹앱은 302 리다이렉트를 사용
+    // ── GET 방식으로 전송 (CORS 문제 우회) ─────────────────
+    // GAS는 GET 요청에 대해 CORS 헤더를 정상적으로 반환함
+    const url = new URL(baseUrl);
+    url.searchParams.set('action', action);
+    url.searchParams.set('params', JSON.stringify(params));
+
+    const res = await fetch(url.toString(), {
+      method: 'GET',
       redirect: 'follow',
     });
 
@@ -56,12 +57,11 @@
     const json = await res.json();
     console.log('[gas-bridge] 응답:', action, json);
 
-    // GAS doPost 래퍼가 { success, data } 형태로 반환
+    // GAS handleAPIRequest가 { success, data } 형태로 반환
     if (json.success === false) {
       throw new Error(json.error || '알 수 없는 오류');
     }
 
-    // GAS 함수가 이미 { success, ... } 를 반환하면 data 그대로 전달
     return json.data !== undefined ? json.data : json;
   }
 
