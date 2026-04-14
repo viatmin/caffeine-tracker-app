@@ -2879,27 +2879,25 @@
         if(!name || !amount || !time) { showInfoModal('입력 확인', '모든 항목을 입력해주세요.'); return; }
         const oldLog = caffeineLogs.find(l => l.id === editingId);
         const oldAmount = oldLog ? oldLog.amount : 0;
-        const index = caffeineLogs.findIndex(l => l.id === editingId);
-        if(index !== -1) caffeineLogs[index] = { ...caffeineLogs[index], name, amount, time, reason };
-
-        // ⭐ 로컬 업데이트 직후 오늘 합계를 직접 계산
-        // showCaffeineWarning(amount) 방식은 내부에서 합계+amount를 이중 합산하므로
-        // totalOverride로 정확한 값을 전달
-        const _editToday = getTodayKST();
-        const _editNewTotal = caffeineLogs
-          .filter(l => getLogDateKST(l.time) === _editToday)
-          .reduce((sum, l) => sum + (l.amount || 0), 0);
+        // 편집된 시간이 오늘인지 여부 (경고 모달 표시 결정용)
+        const isEditToday = getLogDateKST(time) === getTodayKST();
 
         google.script.run
           .withSuccessHandler(() => {
             showSaveCompleteModal('카페인 기록이 수정되었습니다.');
-            closeEditModal(); loadCaffeineLogs(); refreshData();
-            if(amount !== oldAmount) setTimeout(() => { showCaffeineWarning(amount, _editNewTotal); }, 500);
+            closeEditModal(); refreshData();
+            // 오늘 날짜 편집이고 용량이 바뀐 경우만 경고 모달 표시
+            // loadCaffeineLogs(amount)를 사용하면 GAS에서 최신 데이터를 받아
+            // 오늘 총 섭취량을 정확히 계산한 뒤 showCaffeineWarning 호출
+            if(amount !== oldAmount && isEditToday) {
+              loadCaffeineLogs(amount);
+            } else {
+              loadCaffeineLogs();
+            }
           })
           .withFailureHandler(err => {
             showSaveCompleteModal('기록이 수정되었습니다.\n(로컬에만 저장됨)');
             closeEditModal(); loadCaffeineLogs(); refreshData();
-            if(amount !== oldAmount) setTimeout(() => { showCaffeineWarning(amount, _editNewTotal); }, 500);
           })
           .updateCaffeineData({ id: editingId, studentId: user.studentId, name: user.name, drink: name, mg: amount, time, reason });
           
@@ -2984,6 +2982,8 @@
             const today = getTodayKST();
             let todayTotal = 0;
             caffeineLogs.forEach(log => { if(getLogDateKST(log.time) === today) todayTotal += log.amount; });
+            // todayTotal: GAS 최신 데이터 기준 오늘 총 섭취량 (편집된 값 포함)
+            // 0인 경우(오늘 기록 없음)에도 showWarningAfter 자체를 기준으로 표시
             showCaffeineWarning(showWarningAfter, todayTotal > 0 ? todayTotal : showWarningAfter);
           }
         })
