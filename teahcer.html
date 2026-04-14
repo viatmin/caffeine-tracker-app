@@ -3037,13 +3037,17 @@ function _doDeleteManualAward(studentId, idx) {
 
 
 
-// 기본 뱃지 정의
+// 기본 뱃지 정의 (habit_start·streak_record는 시스템 뱃지로 항상 자동 평가 — 편집 목록 제외)
 const DEFAULT_AWARDS = [
-    { id:'habit_start', name:'습관의 시작', image:'🌱', bg:'#ecfdf5', color:'#059669' },
-    { id:'streak_record', name:'꾸준한 기록', image:'🏆', bg:'#fffbeb', color:'#d97706' },
     { id:'caf_safe',   name:'카페인 안전', image:'☕', bg:'#ecfdf5', color:'#059669' },
     { id:'sleep_good', name:'수면 적정',   image:'😴', bg:'#eff6ff', color:'#2563eb' },
 ];
+
+// 시스템 뱃지: 편집 불가, 임계값은 교사 설정(S.badgeHabitDays 등)으로 제어
+const SYSTEM_BADGE_DEFS = {
+    habit_start:  { id:'habit_start',  name:'습관의 시작', image:'🌱', bg:'#ecfdf5', color:'#059669' },
+    streak_record:{ id:'streak_record',name:'꾸준한 기록', image:'🏆', bg:'#fffbeb', color:'#d97706' },
+};
 
 // 현재 뱃지 설정 (localStorage 기반)
 let awardSettings = [];
@@ -3200,19 +3204,11 @@ function loadAwardSettings() {
         if (raw) {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed) && parsed.length > 0) {
-                // today_record → habit_start 마이그레이션
-                const migrated = parsed.map(a => {
-                    if (a.id === 'today_record') {
-                        return { id:'habit_start', name:'습관의 시작', image:'🌱', bg:'#ecfdf5', color:'#059669' };
-                    }
-                    return a;
-                });
-                // habit_start가 없으면 맨 앞에 추가
-                const hasHabit = migrated.some(a => a.id === 'habit_start');
-                if (!hasHabit) {
-                    migrated.unshift({ id:'habit_start', name:'습관의 시작', image:'🌱', bg:'#ecfdf5', color:'#059669' });
-                }
-                awardSettings = migrated;
+                // 시스템 뱃지(habit_start, streak_record, today_record)는 편집 목록에서 제외
+                const filtered = parsed.filter(a =>
+                    a.id !== 'habit_start' && a.id !== 'streak_record' && a.id !== 'today_record'
+                );
+                awardSettings = filtered.length > 0 ? filtered : JSON.parse(JSON.stringify(DEFAULT_AWARDS));
                 localStorage.setItem('awardSettings', JSON.stringify(awardSettings));
                 return;
             }
@@ -3231,31 +3227,30 @@ function evaluateAwards(studentId, dates, baseDate) {
     const earned = [];
     const minDays = parseInt(document.getElementById('setting_awardMinDays')?.value || S.awardMinDays || 5);
 
+    // ── 시스템 뱃지: 편집 목록과 무관하게 항상 평가 ──
+    // 🌱 습관의 시작 — 교사 설정 N일 연속 기록
+    const habitN = S.badgeHabitDays || 3;
+    const lastNDays = Array.from({length: habitN}, (_, n) => {
+        const d = new Date(baseDate + 'T00:00:00');
+        d.setDate(d.getDate() - n);
+        return d.toISOString().split('T')[0];
+    });
+    if (lastNDays.every(d =>
+        caffeineData.some(c => c.학번 === studentId && c.섭취시간.startsWith(d)) ||
+        sleepData.some(sl => sl.학번 === studentId && sl.날짜 === d)
+    )) earned.push(SYSTEM_BADGE_DEFS.habit_start);
+
+    // 🏆 꾸준한 기록 — 조회 7일 중 minDays 이상 기록
+    const recDays = dates.filter(d =>
+        caffeineData.some(c => c.학번 === studentId && c.섭취시간.startsWith(d)) ||
+        sleepData.some(sl => sl.학번 === studentId && sl.날짜 === d)
+    ).length;
+    if (recDays >= minDays) earned.push(SYSTEM_BADGE_DEFS.streak_record);
+
+    // ── 커스텀/일반 뱃지 루프 ──
     awardSettings.forEach(award => {
         let pass = false;
-        if (award.id === 'habit_start') {
-            // 교사 설정 N일 연속 기록: baseDate 포함 최근 N일 모두 기록 있어야 함
-            const habitN = S.badgeHabitDays || 3;
-            const lastN = Array.from({length: habitN}, (_, n) => {
-                const d = new Date(baseDate + 'T00:00:00');
-                d.setDate(d.getDate() - n);
-                return d.toISOString().split('T')[0];
-            });
-            pass = lastN.every(d =>
-                caffeineData.some(c => c.학번 === studentId && c.섭취시간.startsWith(d)) ||
-                sleepData.some(sl => sl.학번 === studentId && sl.날짜 === d)
-            );
-        } else if (award.id === 'today_record') {
-            const hasCaf = caffeineData.some(c => c.학번 === studentId && c.섭취시간.startsWith(baseDate));
-            const hasSleep = sleepData.some(sl => sl.학번 === studentId && sl.날짜 === baseDate);
-            pass = hasCaf || hasSleep;
-        } else if (award.id === 'streak_record') {
-            const recDays = dates.filter(d =>
-                caffeineData.some(c => c.학번 === studentId && c.섭취시간.startsWith(d)) ||
-                sleepData.some(sl => sl.학번 === studentId && sl.날짜 === d)
-            ).length;
-            pass = recDays >= minDays;
-        } else if (award.id === 'caf_safe') {
+        if (award.id === 'caf_safe') {
             const hasRec = hasCafRecordOnDates(studentId, dates);
             if (hasRec) {
                 const ac = avgCafForDates(studentId, dates);
@@ -3265,7 +3260,7 @@ function evaluateAwards(studentId, dates, baseDate) {
         } else if (award.id === 'sleep_good') {
             const asl = avgSleepForDates(studentId, dates);
             pass = asl >= S.sleepWarn && asl <= S.sleepGood;
-        } else {
+        } else if (award.id !== 'habit_start' && award.id !== 'streak_record' && award.id !== 'today_record') {
             // 커스텀 뱃지: 조건 없이 always 표시 (설정에서 관리)
             pass = award.alwaysShow === true;
         }
@@ -3287,9 +3282,6 @@ function renderAwardSettingList() {
 
         // 기본 뱃지 조건 설명
         const condDesc = {
-            habit_start: '3일 연속 기록 있음',
-            today_record: '오늘 기록 있음',
-            streak_record: '7일 중 N일 이상 기록',
             caf_safe: '카페인 7일 평균 안전',
             sleep_good: '수면 7일 평균 적정',
         }[award.id] || '커스텀';
