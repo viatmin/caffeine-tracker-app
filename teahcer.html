@@ -3167,6 +3167,9 @@ function loadBadgeThresholdsFromGAS() {
             S.badgeHabitDays = result.habitStart || 3;
             S.badgeStreakDays = result.streak || 7;
             S.badgeMonthlyDays = result.monthly || 10;
+            S.badgeHabitName = result.habitStartName || '습관의 시작';
+            S.badgeStreakName = result.streakName || '꾸준한 습관';
+            S.badgeMonthlyName = result.monthlyName || '챌린지 달성';
             try { localStorage.setItem('monSettings', JSON.stringify(S)); } catch(e) {}
             if (document.getElementById('setting_badgeHabitDays'))
                 document.getElementById('setting_badgeHabitDays').value = S.badgeHabitDays;
@@ -3174,6 +3177,12 @@ function loadBadgeThresholdsFromGAS() {
                 document.getElementById('setting_badgeStreakDays').value = S.badgeStreakDays;
             if (document.getElementById('setting_badgeMonthlyDays'))
                 document.getElementById('setting_badgeMonthlyDays').value = S.badgeMonthlyDays;
+            if (document.getElementById('setting_badgeHabitName'))
+                document.getElementById('setting_badgeHabitName').value = S.badgeHabitName;
+            if (document.getElementById('setting_badgeStreakName'))
+                document.getElementById('setting_badgeStreakName').value = S.badgeStreakName;
+            if (document.getElementById('setting_badgeMonthlyName'))
+                document.getElementById('setting_badgeMonthlyName').value = S.badgeMonthlyName;
         })
         .withFailureHandler(function(err) {
             console.warn('뱃지 임계값 로드 실패:', err);
@@ -3185,6 +3194,9 @@ function saveBadgeThresholdsToGAS() {
     const habitDays = parseInt(document.getElementById('setting_badgeHabitDays')?.value || S.badgeHabitDays || 3);
     const streakDays = parseInt(document.getElementById('setting_badgeStreakDays')?.value || S.badgeStreakDays || 7);
     const monthlyDays = parseInt(document.getElementById('setting_badgeMonthlyDays')?.value || S.badgeMonthlyDays || 10);
+    const habitName = (document.getElementById('setting_badgeHabitName')?.value || S.badgeHabitName || '습관의 시작').trim();
+    const streakName = (document.getElementById('setting_badgeStreakName')?.value || S.badgeStreakName || '꾸준한 습관').trim();
+    const monthlyName = (document.getElementById('setting_badgeMonthlyName')?.value || S.badgeMonthlyName || '챌린지 달성').trim();
     const statusEl = document.getElementById('badgeThresholdSaveStatus');
     if (statusEl) statusEl.textContent = '저장 중...';
     google.script.run
@@ -3193,6 +3205,9 @@ function saveBadgeThresholdsToGAS() {
                 S.badgeHabitDays = habitDays;
                 S.badgeStreakDays = streakDays;
                 S.badgeMonthlyDays = monthlyDays;
+                S.badgeHabitName = habitName;
+                S.badgeStreakName = streakName;
+                S.badgeMonthlyName = monthlyName;
                 try { localStorage.setItem('monSettings', JSON.stringify(S)); } catch(e) {}
                 if (statusEl) { statusEl.textContent = '✅ 저장 완료!'; setTimeout(()=>{ if(statusEl) statusEl.textContent=''; }, 3000); }
             } else {
@@ -3202,7 +3217,7 @@ function saveBadgeThresholdsToGAS() {
         .withFailureHandler(function(err) {
             if (statusEl) statusEl.textContent = '❌ 오류: ' + err;
         })
-        .saveBadgeThresholds(habitDays, streakDays, monthlyDays);
+        .saveBadgeThresholds(habitDays, streakDays, monthlyDays, habitName, streakName, monthlyName);
 }
 
 function loadAwardSettings() {
