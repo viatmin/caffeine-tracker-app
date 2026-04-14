@@ -1946,13 +1946,19 @@ async function requestAIAnalysis(){
     document.getElementById('aiBoxBody').classList.add('open');document.getElementById('aiArrow').classList.add('open');
     const aiContent=document.getElementById('aiContent'),btn=document.getElementById('aiBtn'),badge=document.getElementById('aiStatusBadge');
 
-    if(cafDays<S.aiMinCaf||slpDays<S.aiMinSleep){
-        const yc=getYestCaf(currentStudentId);
+    // 둘 다 부족할 때만 차단 (하나라도 3일 이상이면 분석 진행)
+    if(cafDays<S.aiMinCaf && slpDays<S.aiMinSleep){
         const weekCaf=caffeineData.filter(c=>c.학번===currentStudentId&&dates.some(d=>c.섭취시간.startsWith(d))).reduce((a,b)=>a+b.함량,0);
-        const avgCafNow=cafDays>0?weekCaf/cafDays:0;const slpRecs=sleepData.filter(sl=>sl.학번===currentStudentId&&dates.includes(sl.날짜));const avgSlpNow=slpRecs.length?slpRecs.reduce((a,b)=>a+b.시간,0)/slpRecs.length:0;
-        aiContent.innerHTML=`<div style="line-height:2;">📊 <strong>건강 데이터 분석 불가</strong><br><br>Gemini AI 건강 분석을 받으려면:<br>✅ <strong>카페인 데이터</strong>: 최소 ${S.aiMinCaf}일 이상 필요<br>✅ <strong>수면 데이터</strong>: 최소 ${S.aiMinSleep}일 이상 필요<br><br>📈 현재 기록 현황<br>• ☕ 카페인: <strong>${cafDays}/7일</strong> ${cafDays>=S.aiMinCaf?'✅':'❌'}<br>• 😴 수면: <strong>${slpDays}/7일</strong> ${slpDays>=S.aiMinSleep?'✅':'❌'}<br><br>${(cafDays>0||slpDays>0)?`📊 현재까지 데이터<br>• 평균 카페인: ${Math.round(avgCafNow)}mg<br>• 평균 수면: ${avgSlpNow.toFixed(1)}시간<br><br>`:''}💡 총 ${Math.max(S.aiMinCaf-cafDays,0)+Math.max(S.aiMinSleep-slpDays,0)}일 더 기록하면 분석이 가능해요!</div>`;
+        const avgCafNow=cafDays>0?weekCaf/cafDays:0;
+        const slpRecsNow=sleepData.filter(sl=>sl.학번===currentStudentId&&dates.includes(sl.날짜));
+        const avgSlpNow=slpRecsNow.length?slpRecsNow.reduce((a,b)=>a+b.시간,0)/slpRecsNow.length:0;
+        aiContent.innerHTML=`<div style="line-height:2;">📊 <strong>데이터가 너무 부족해요</strong><br><br>카페인 또는 수면 중 하나라도 3일 이상 기록하면 분석이 가능합니다.<br><br>📈 현재 기록 현황<br>• ☕ 카페인: <strong>${cafDays}/7일</strong> ${cafDays>=S.aiMinCaf?'✅':'❌'}<br>• 😴 수면: <strong>${slpDays}/7일</strong> ${slpDays>=S.aiMinSleep?'✅':'❌'}<br><br>${(cafDays>0||slpDays>0)?`📊 현재까지 데이터<br>• 평균 카페인: ${Math.round(avgCafNow)}mg<br>• 평균 수면: ${avgSlpNow.toFixed(1)}시간<br><br>`:''}💡 카페인 또는 수면 중 하나라도 ${Math.min(S.aiMinCaf,S.aiMinSleep)}일 이상 기록하면 분석이 가능해요!</div>`;
         badge.textContent='(데이터 부족)';badge.style.color='#f59e0b';return;
     }
+
+    // 한쪽 부족 시 배지에 안내 표시 후 분석 진행
+    if(cafDays<S.aiMinCaf){badge.textContent='(카페인 기록 부족 — 분석 진행)';badge.style.color='#f59e0b';}
+    else if(slpDays<S.aiMinSleep){badge.textContent='(수면 기록 부족 — 분석 진행)';badge.style.color='#f59e0b';}
 
     const cafRecs=caffeineData.filter(c=>c.학번===currentStudentId&&dates.some(d=>c.섭취시간.startsWith(d)));
     const slpRecs=sleepData.filter(sl=>sl.학번===currentStudentId&&dates.includes(sl.날짜));
