@@ -893,37 +893,25 @@
                     <input type="number" id="setting_awardMinDays" class="settings-input" min="1" max="7" step="1" value="5" style="width:70px;">
                     <span class="settings-unit">일 이상 / 7일 기록 시 부여</span>
                 </div>
-                <!-- 학생용 자동 뱃지 임계값 설정 -->
+                <!-- 학생용 자동 뱃지 설정 v2 (연속/누적 타입) -->
                 <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px 16px;margin-bottom:8px;">
-                    <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:12px;">🏅 학생용 자동 뱃지 달성 기준 (교사 설정)</div>
-                    <div style="display:flex;flex-direction:column;gap:12px;">
-                        <!-- 🌱 습관의 시작 -->
-                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                            <span style="font-size:20px;flex-shrink:0;">🌱</span>
-                            <input type="text" id="setting_badgeHabitName" placeholder="뱃지 이름" value="습관의 시작"
-                                style="width:110px;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:600;">
-                            <input type="number" id="setting_badgeHabitDays" class="settings-input" min="1" max="365" step="1" value="3" style="width:65px;">
-                            <span class="settings-unit">일 연속 기록 달성 시</span>
-                        </div>
-                        <!-- 🏆 꾸준한 습관 -->
-                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                            <span style="font-size:20px;flex-shrink:0;">🏆</span>
-                            <input type="text" id="setting_badgeStreakName" placeholder="뱃지 이름" value="꾸준한 습관"
-                                style="width:110px;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:600;">
-                            <input type="number" id="setting_badgeStreakDays" class="settings-input" min="1" max="365" step="1" value="7" style="width:65px;">
-                            <span class="settings-unit">일 연속 기록 달성 시</span>
-                        </div>
-                        <!-- 🌟 챌린지 달성 -->
-                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                            <span style="font-size:20px;flex-shrink:0;">🌟</span>
-                            <input type="text" id="setting_badgeMonthlyName" placeholder="뱃지 이름" value="챌린지 달성"
-                                style="width:110px;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:600;">
-                            <input type="number" id="setting_badgeMonthlyDays" class="settings-input" min="1" max="365" step="1" value="10" style="width:65px;">
-                            <span class="settings-unit">일 이상 기록 달성 시</span>
-                        </div>
+                    <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:4px;">🏅 학생용 자동 뱃지 달성 기준 (교사 설정)</div>
+                    <div style="font-size:11px;color:#6b7280;margin-bottom:12px;">
+                        🔁 <b>연속</b>: 하루도 빠짐없이 N일 연속 기록해야 달성 &nbsp;|&nbsp; 📊 <b>누적</b>: 연속 아니어도 총 N번 기록하면 달성
                     </div>
-                    <div style="margin-top:12px;display:flex;align-items:center;gap:8px;">
-                        <button onclick="saveBadgeThresholdsToGAS()" style="padding:7px 18px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">☁️ 서버에 저장</button>
+                    <!-- 챌린지 이름 -->
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+                        <label style="font-size:12px;font-weight:600;color:#374151;white-space:nowrap;">챌린지 이름:</label>
+                        <input type="text" id="setting_challengeName" placeholder="예: 10일 챌린지" value="건강 챌린지"
+                            style="flex:1;max-width:200px;padding:5px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:600;">
+                    </div>
+                    <!-- 뱃지 목록 (동적) -->
+                    <div id="badgeConfigRows" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+                    <!-- 추가 버튼 -->
+                    <button onclick="addBadgeConfigRow()" style="padding:5px 14px;background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:12px;">+ 뱃지 추가</button>
+                    <!-- 저장 -->
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <button onclick="saveBadgeConfigToGAS()" style="padding:7px 18px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">☁️ 서버에 저장</button>
                         <span id="badgeThresholdSaveStatus" style="font-size:12px;color:#6b7280;"></span>
                     </div>
                     <div style="margin-top:8px;font-size:11px;color:#6b7280;">💡 저장하면 학생 앱 재로그인 시 새 기준이 적용됩니다.</div>
@@ -1111,17 +1099,14 @@ function loadSettings(){
     document.getElementById('setting_aiMinCaf').value=S.aiMinCaf||3;
     document.getElementById('setting_aiMinSleep').value=S.aiMinSleep||3;
     if(document.getElementById('setting_awardMinDays'))document.getElementById('setting_awardMinDays').value=S.awardMinDays||5;
-    if(document.getElementById('setting_badgeHabitDays'))document.getElementById('setting_badgeHabitDays').value=S.badgeHabitDays||3;
-    if(document.getElementById('setting_badgeStreakDays'))document.getElementById('setting_badgeStreakDays').value=S.badgeStreakDays||7;
-    if(document.getElementById('setting_badgeMonthlyDays'))document.getElementById('setting_badgeMonthlyDays').value=S.badgeMonthlyDays||10;
     updateCafPreview(); updateSleepPreview();
     document.getElementById('sleepWarningDetail').textContent=`7일 평균 ${S.sleepSevere}시간 미만`;
     // 뱃지 설정 로드 및 렌더
     loadAwardSettings();
     loadManualAwards();
     renderAwardSettingList();
-    // 서버에서 뱃지 임계값 로드 (최신값 반영)
-    loadBadgeThresholdsFromGAS();
+    // 서버에서 뱃지 설정 로드 (v2)
+    loadBadgeConfigFromGAS();
 }
 function saveSettings(){
     S.cafMaxFixed=parseFloat(document.getElementById('setting_cafMax').value)||0;
@@ -3159,51 +3144,144 @@ function renderAwardsTab() {
     }).join('');
 }
 
-// ── 뱃지 임계값 GAS 연동 ──────────────────────────────────────
-function loadBadgeThresholdsFromGAS() {
+// ── 뱃지 설정 v2 GAS 연동 ─────────────────────────────────────
+
+// 현재 뱃지 설정 (GAS에서 로드)
+let badgeConfigV2 = null;
+
+// 뱃지 행 색상 팔레트 (순환)
+const BADGE_COLOR_PALETTE = [
+  { color:'#059669', bg:'#ecfdf5' },
+  { color:'#d97706', bg:'#fffbeb' },
+  { color:'#7c3aed', bg:'#f5f3ff' },
+  { color:'#2563eb', bg:'#eff6ff' },
+  { color:'#dc2626', bg:'#fef2f2' },
+  { color:'#0891b2', bg:'#ecfeff' },
+];
+
+function loadBadgeConfigFromGAS() {
     google.script.run
         .withSuccessHandler(function(result) {
             if (!result || !result.success) return;
-            S.badgeHabitDays = result.habitStart || 3;
-            S.badgeStreakDays = result.streak || 7;
-            S.badgeMonthlyDays = result.monthly || 10;
-            try { localStorage.setItem('monSettings', JSON.stringify(S)); } catch(e) {}
-            if (document.getElementById('setting_badgeHabitDays'))
-                document.getElementById('setting_badgeHabitDays').value = S.badgeHabitDays;
-            if (document.getElementById('setting_badgeStreakDays'))
-                document.getElementById('setting_badgeStreakDays').value = S.badgeStreakDays;
-            if (document.getElementById('setting_badgeMonthlyDays'))
-                document.getElementById('setting_badgeMonthlyDays').value = S.badgeMonthlyDays;
+            badgeConfigV2 = result.config;
+            renderBadgeConfigRows();
         })
         .withFailureHandler(function(err) {
-            console.warn('뱃지 임계값 로드 실패:', err);
+            console.warn('뱃지 설정 로드 실패:', err);
         })
-        .getBadgeThresholds();
+        .getBadgeConfig();
 }
 
-function saveBadgeThresholdsToGAS() {
-    const habitDays = parseInt(document.getElementById('setting_badgeHabitDays')?.value || S.badgeHabitDays || 3);
-    const streakDays = parseInt(document.getElementById('setting_badgeStreakDays')?.value || S.badgeStreakDays || 7);
-    const monthlyDays = parseInt(document.getElementById('setting_badgeMonthlyDays')?.value || S.badgeMonthlyDays || 10);
+function renderBadgeConfigRows() {
+    const container = document.getElementById('badgeConfigRows');
+    if (!container || !badgeConfigV2) return;
+
+    // 챌린지 이름
+    const nameEl = document.getElementById('setting_challengeName');
+    if (nameEl) nameEl.value = badgeConfigV2.challengeName || '건강 챌린지';
+
+    container.innerHTML = '';
+    (badgeConfigV2.badges || []).forEach(function(badge, idx) {
+        container.appendChild(createBadgeRow(badge, idx));
+    });
+}
+
+function createBadgeRow(badge, idx) {
+    const row = document.createElement('div');
+    row.dataset.idx = idx;
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:#fff;border:1px solid #d1fae5;border-radius:8px;padding:8px 10px;';
+
+    const isStreak = (badge.type !== 'count');
+    const typeLabel = isStreak ? '🔁 연속' : '📊 누적';
+    const typeBtnStyle = isStreak
+        ? 'background:#dcfce7;color:#166534;border:1px solid #86efac;'
+        : 'background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;';
+
+    row.innerHTML = `
+      <input type="text" class="bc-emoji" value="${badge.emoji || '🏅'}"
+        style="width:38px;text-align:center;padding:4px;border:1px solid #d1d5db;border-radius:6px;font-size:16px;"
+        title="이모지">
+      <input type="text" class="bc-name" value="${badge.name || ''}" placeholder="뱃지 이름"
+        style="width:110px;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:600;">
+      <input type="number" class="bc-days" value="${badge.days || 3}" min="1" max="365"
+        style="width:58px;padding:5px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;text-align:center;">
+      <span style="font-size:12px;color:#6b7280;">일</span>
+      <button onclick="toggleBadgeType(this)" data-type="${badge.type || 'streak'}"
+        style="padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;${typeBtnStyle}">
+        ${typeLabel}
+      </button>
+      <button onclick="removeBadgeRow(this)" style="margin-left:auto;padding:3px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:12px;cursor:pointer;">삭제</button>
+    `;
+    return row;
+}
+
+function toggleBadgeType(btn) {
+    const isStreak = (btn.dataset.type === 'streak');
+    // 토글
+    if (isStreak) {
+        btn.dataset.type = 'count';
+        btn.textContent = '📊 누적';
+        btn.style.cssText += 'background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;';
+    } else {
+        btn.dataset.type = 'streak';
+        btn.textContent = '🔁 연속';
+        btn.style.cssText += 'background:#dcfce7;color:#166534;border:1px solid #86efac;';
+    }
+}
+
+function addBadgeConfigRow() {
+    const container = document.getElementById('badgeConfigRows');
+    if (!container) return;
+    const idx = container.children.length;
+    const palette = BADGE_COLOR_PALETTE[idx % BADGE_COLOR_PALETTE.length];
+    const newBadge = { id: 'b_' + Date.now(), type: 'streak', days: 3, name: '새 뱃지', emoji: '⭐', color: palette.color, bg: palette.bg };
+    container.appendChild(createBadgeRow(newBadge, idx));
+}
+
+function removeBadgeRow(btn) {
+    btn.closest('[data-idx]').remove();
+    // idx 재정렬
+    document.querySelectorAll('#badgeConfigRows [data-idx]').forEach(function(el, i) { el.dataset.idx = i; });
+}
+
+function collectBadgeConfigFromUI() {
+    const challengeName = (document.getElementById('setting_challengeName')?.value || '건강 챌린지').trim();
+    const rows = document.querySelectorAll('#badgeConfigRows [data-idx]');
+    const badges = [];
+    rows.forEach(function(row, idx) {
+        const emoji = row.querySelector('.bc-emoji')?.value?.trim() || '🏅';
+        const name  = row.querySelector('.bc-name')?.value?.trim() || '뱃지';
+        const days  = parseInt(row.querySelector('.bc-days')?.value || '3') || 3;
+        const typeBtn = row.querySelector('button[data-type]');
+        const type  = typeBtn ? typeBtn.dataset.type : 'streak';
+        const palette = BADGE_COLOR_PALETTE[idx % BADGE_COLOR_PALETTE.length];
+        badges.push({ id: 'b_' + idx, type, days, name, emoji, color: palette.color, bg: palette.bg });
+    });
+    return { challengeName, badges };
+}
+
+function saveBadgeConfigToGAS() {
+    const config = collectBadgeConfigFromUI();
     const statusEl = document.getElementById('badgeThresholdSaveStatus');
     if (statusEl) statusEl.textContent = '저장 중...';
     google.script.run
         .withSuccessHandler(function(result) {
             if (result && result.success) {
-                S.badgeHabitDays = habitDays;
-                S.badgeStreakDays = streakDays;
-                S.badgeMonthlyDays = monthlyDays;
-                try { localStorage.setItem('monSettings', JSON.stringify(S)); } catch(e) {}
+                badgeConfigV2 = config;
                 if (statusEl) { statusEl.textContent = '✅ 저장 완료!'; setTimeout(()=>{ if(statusEl) statusEl.textContent=''; }, 3000); }
             } else {
-                if (statusEl) statusEl.textContent = '❌ 저장 실패: ' + (result && result.error ? result.error : '오류');
+                if (statusEl) statusEl.textContent = '❌ 저장 실패: ' + (result?.error || '오류');
             }
         })
         .withFailureHandler(function(err) {
             if (statusEl) statusEl.textContent = '❌ 오류: ' + err;
         })
-        .saveBadgeThresholds(habitDays, streakDays, monthlyDays);
+        .saveBadgeConfig(config);
 }
+
+// 구버전 호환 (기존 코드 참조 방지)
+function loadBadgeThresholdsFromGAS() { loadBadgeConfigFromGAS(); }
+function saveBadgeThresholdsToGAS()   { saveBadgeConfigToGAS(); }
 
 function loadAwardSettings() {
     try {
