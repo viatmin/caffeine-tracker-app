@@ -1408,6 +1408,11 @@ function msGet(id) {
     return _msInstances[id] ? _msInstances[id].getSelected() : null;
 }
 
+// 학년 정규화: 양의 정수가 아닌 모든 값(빈 칸, 교생, 0, 1인 등) → "교직원"
+function normalizeGrade(g) {
+    const s = String(g ?? '').trim();
+    return (s && /^[1-9]\d*$/.test(s)) ? s : '교직원';
+}
 // 학년 레이블: 숫자면 "N학년", 아니면 그대로
 function gradeLabel(g) { return /^\d+$/.test(String(g)) ? g + '학년' : String(g); }
 // 반 레이블: 숫자면 "N반", 아니면 그대로
@@ -1417,8 +1422,8 @@ function initFilters(){
     const gradeIds = ['gradeFilter','studentGradeFilter','cafGradeFilter','sleepGradeFilter'];
     const classIds = ['classFilter','studentClassFilter','cafClassFilter','sleepClassFilter'];
 
-    // 고유 학년/반 목록 (정렬: 숫자 → 문자)
-    const grades = [...new Set(studentsData.map(s => s.학년))].sort((a, b) => {
+    // 고유 학년/반 목록 (정렬: 숫자 → 문자) — 비표준 학년은 교직원으로 정규화
+    const grades = [...new Set(studentsData.map(s => normalizeGrade(s.학년)))].sort((a, b) => {
         const na = parseInt(a), nb = parseInt(b);
         if (!isNaN(na) && !isNaN(nb)) return na - nb;
         if (!isNaN(na)) return -1;
@@ -1463,7 +1468,7 @@ function switchTab(n,el){document.querySelectorAll('.tab-button').forEach(b=>b.c
 
 function updateDashboard(){
     const g=msGet('gradeFilter'), c=msGet('classFilter');
-    let f=studentsData;if(g)f=f.filter(s=>g.has(s.학년));if(c)f=f.filter(s=>c.has(s.반));
+    let f=studentsData;if(g)f=f.filter(s=>g.has(normalizeGrade(s.학년)));if(c)f=f.filter(s=>c.has(s.반));
     const dates7=getLast7Dates(today);
     let nr=0,cw=0,sw=0;
     f.forEach(s=>{
@@ -1509,7 +1514,7 @@ function getCafTabFilter(){
     const lbl=document.getElementById('cafDateRangeLabel');
     if(lbl)lbl.textContent=dates[0].substring(5)+' ~ '+dates[6].substring(5);
     let students=studentsData;
-    if(gv)students=students.filter(s=>gv.has(s.학년));
+    if(gv)students=students.filter(s=>gv.has(normalizeGrade(s.학년)));
     if(cv)students=students.filter(s=>cv.has(s.반));
     const ids=new Set(students.map(s=>s.학번));
     const filteredCaf=caffeineData.filter(c=>ids.has(c.학번));
@@ -1580,7 +1585,7 @@ function getSleepTabFilter(){
     const lbl=document.getElementById('sleepDateRangeLabel');
     if(lbl)lbl.textContent=dates[0].substring(5)+' ~ '+dates[6].substring(5);
     let students=studentsData;
-    if(gv)students=students.filter(s=>gv.has(s.학년));
+    if(gv)students=students.filter(s=>gv.has(normalizeGrade(s.학년)));
     if(cv)students=students.filter(s=>cv.has(s.반));
     const ids=new Set(students.map(s=>s.학번));
     const filteredSleep=sleepData.filter(s=>ids.has(s.학번)&&dates.includes(s.날짜));
@@ -1659,7 +1664,7 @@ function resetStudentDate(){
 function filterStudents(){
     const sv=document.getElementById('studentSearchInput').value.toLowerCase();
     const gv=msGet('studentGradeFilter'), cv=msGet('studentClassFilter');
-    let f=studentsData;if(gv)f=f.filter(s=>gv.has(s.학년));if(cv)f=f.filter(s=>cv.has(s.반));
+    let f=studentsData;if(gv)f=f.filter(s=>gv.has(normalizeGrade(s.학년)));if(cv)f=f.filter(s=>cv.has(s.반));
     if(sv)f=f.filter(s=>s.학번.includes(sv)||s.이름.includes(sv));
     const fd=getStudentFilterDate();
     const d7=getLast7Dates(fd);
