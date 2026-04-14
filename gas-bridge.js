@@ -22,10 +22,6 @@
   // 또는 이 파일 상단에서 직접 설정 가능
   // const GAS_API_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
 
-  // ── 내부 상태 ─────────────────────────────────────────────────────────────
-  let _successHandler = null;
-  let _failureHandler = null;
-
   /**
    * fetch로 GAS API 호출
    * @param {string} action  - 호출할 GAS 함수명
@@ -66,50 +62,59 @@
   }
 
   /**
-   * google.script.run 폴리필 객체
+   * google.script.run 폴리필
    * 체이닝 지원: .withSuccessHandler(fn).withFailureHandler(fn).funcName(args)
+   *
+   * ⭐ 호출마다 독립적인 컨텍스트를 생성하여 동시 다중 호출 시
+   *    핸들러가 서로 덮어쓰이는 버그를 방지합니다.
    */
-  const scriptRunProxy = {
-    // 핸들러 등록 메서드 (체이닝 반환)
-    withSuccessHandler(fn) {
-      _successHandler = fn;
-      return this;
-    },
-    withFailureHandler(fn) {
-      _failureHandler = fn;
-      return this;
-    },
-  };
+  function _createCallContext() {
+    let _successHandler = null;
+    let _failureHandler = null;
+
+    const ctx = {
+      withSuccessHandler(fn) {
+        _successHandler = fn;
+        return ctx;
+      },
+      withFailureHandler(fn) {
+        _failureHandler = fn;
+        return ctx;
+      },
+    };
+
+    return new Proxy(ctx, {
+      get(target, prop) {
+        if (prop in target) return target[prop];
+
+        // GAS 함수 호출
+        return function (...args) {
+          const onSuccess = _successHandler;
+          const onFailure = _failureHandler;
+
+          _callGAS(prop, args)
+            .then(result => {
+              if (typeof onSuccess === 'function') onSuccess(result);
+            })
+            .catch(err => {
+              console.error('[gas-bridge] 오류:', prop, err);
+              if (typeof onFailure === 'function') {
+                onFailure({ message: err.message });
+              }
+            });
+        };
+      }
+    });
+  }
 
   /**
-   * Proxy로 임의 함수명 호출을 가로채서 GAS API 요청으로 변환
+   * google.script.run 에 접근할 때마다 새 컨텍스트를 반환하는 최상위 Proxy
    */
-  const gasRunProxy = new Proxy(scriptRunProxy, {
-    get(target, prop) {
-      // 기존 메서드(withSuccessHandler 등)는 그대로 반환
-      if (prop in target) return target[prop];
-
-      // 그 외 속성 접근 = GAS 함수 호출로 간주
-      return function (...args) {
-        // 핸들러를 지역 변수에 캡처 (연속 호출 간 덮어쓰기 방지)
-        const onSuccess = _successHandler;
-        const onFailure = _failureHandler;
-
-        // 핸들러 초기화 (다음 호출을 위해)
-        _successHandler = null;
-        _failureHandler = null;
-
-        _callGAS(prop, args)
-          .then(result => {
-            if (typeof onSuccess === 'function') onSuccess(result);
-          })
-          .catch(err => {
-            console.error('[gas-bridge] 오류:', prop, err);
-            if (typeof onFailure === 'function') {
-              onFailure({ message: err.message });
-            }
-          });
-      };
+  const gasRunProxy = new Proxy({}, {
+    get(_target, prop) {
+      // 매 접근마다 독립 컨텍스트 생성 → 동시 호출 간 핸들러 충돌 없음
+      const ctx = _createCallContext();
+      return ctx[prop] !== undefined ? ctx[prop] : ctx.withSuccessHandler.bind(ctx);
     }
   });
 
