@@ -189,11 +189,14 @@
         <p class="text-gray-400 text-sm mt-2">건강한 카페인 생활을 위한 모니터링</p>
       </div>
       <div class="space-y-4">
-        <input type="text" id="sid" placeholder="학번 (예: 1101)" 
+        <input type="text" id="sid" placeholder="학번 (예: 1101)"
+          inputmode="numeric"
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
           class="w-full p-4 bg-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500">
-        <input type="text" id="sname" placeholder="이름" 
+        <input type="text" id="sname" placeholder="이름"
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
           class="w-full p-4 bg-gray-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500">
-        <button onclick="login()" id="loginBtn" 
+        <button onclick="login()" ontouchend="event.preventDefault(); login();" id="loginBtn"
           class="w-full bg-indigo-600 text-white p-4 rounded-2xl font-bold text-lg shadow-lg active:scale-95 transition-transform">
           로그인
         </button>
