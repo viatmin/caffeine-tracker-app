@@ -632,54 +632,29 @@
 
         <!-- 뱃지 섹션 -->
         <div class="bg-white p-5 rounded-[2rem] shadow-sm">
-          <h4 class="font-bold text-base mb-3 flex items-center gap-2">
+          <h4 class="font-bold text-base mb-1 flex items-center gap-2">
             <i class="fa-solid fa-award text-indigo-600"></i> 나의 건강 뱃지
           </h4>
-          <div class="grid grid-cols-2 gap-3">
-            <!-- 오늘의 실천: 카페인 -->
+          <p class="text-xs text-indigo-400 font-semibold mb-3" id="badge-challenge-name"></p>
+          <!-- 오늘의 실천 (고정) -->
+          <div class="grid grid-cols-2 gap-3 mb-3">
             <div id="badge-daily-caf" class="flex items-center gap-3 p-3 rounded-2xl bg-gray-100 transition-all duration-500">
               <span class="text-3xl flex-shrink-0 grayscale opacity-40" id="badge-daily-caf-icon">☕</span>
               <div class="min-w-0">
                 <p class="text-xs font-bold text-gray-400 leading-tight" id="badge-daily-caf-label">카페인<br>오늘 기록</p>
               </div>
             </div>
-            <!-- 오늘의 실천: 수면 -->
             <div id="badge-daily-sleep" class="flex items-center gap-3 p-3 rounded-2xl bg-gray-100 transition-all duration-500">
               <span class="text-3xl flex-shrink-0 grayscale opacity-40" id="badge-daily-sleep-icon">😴</span>
               <div class="min-w-0">
                 <p class="text-xs font-bold text-gray-400 leading-tight" id="badge-daily-sleep-label">수면<br>오늘 기록</p>
               </div>
             </div>
-            <!-- 🌱 습관의 시작 (3일 연속 기록) -->
-            <div id="badge-habit-start" class="flex items-center gap-3 p-3 rounded-2xl bg-gray-100 transition-all duration-500 col-span-1">
-              <span class="text-3xl flex-shrink-0 grayscale opacity-40" id="badge-habit-start-icon">🌱</span>
-              <div class="min-w-0">
-                <p class="text-xs font-bold text-gray-400 leading-tight" id="badge-habit-start-label">습관의<br>시작</p>
-                <p class="text-[10px] text-gray-400 mt-0.5" id="badge-habit-start-sub">3일 연속 기록</p>
-              </div>
-            </div>
-            <!-- 꾸준한 습관 (연속 기록) -->
-            <div id="badge-streak" class="flex items-center gap-3 p-3 rounded-2xl bg-gray-100 transition-all duration-500 col-span-1">
-              <span class="text-3xl flex-shrink-0 grayscale opacity-40" id="badge-streak-icon">🏆</span>
-              <div class="min-w-0">
-                <p class="text-xs font-bold text-gray-400 leading-tight" id="badge-streak-label">꾸준한<br>습관</p>
-                <p class="text-[10px] text-gray-400 mt-0.5" id="badge-streak-sub">연속 0일</p>
-              </div>
-            </div>
-            <!-- 월간 마스터 -->
-            <div id="badge-monthly" class="flex items-center gap-3 p-3 rounded-2xl bg-gray-100 transition-all duration-500 col-span-1">
-              <span class="text-3xl flex-shrink-0 grayscale opacity-40" id="badge-monthly-icon">🌟</span>
-              <div class="min-w-0">
-                <p class="text-xs font-bold text-gray-400 leading-tight" id="badge-monthly-label">월간<br>마스터</p>
-                <p class="text-[10px] text-gray-400 mt-0.5" id="badge-monthly-sub">0일 기록</p>
-              </div>
-            </div>
           </div>
-          <!-- 연속기록 경고 / 진행 안내 -->
-          <div id="badge-streak-warning" class="hidden mt-3 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
-            <span class="text-base flex-shrink-0">⚠️</span>
-            <p class="text-xs text-red-600 leading-relaxed" id="badge-streak-warning-text"></p>
-          </div>
+          <!-- 챌린지 뱃지 (동적 렌더) -->
+          <div id="challengeBadgeGrid" class="grid grid-cols-2 gap-3"></div>
+          <!-- 경고 / 응원 메시지 -->
+          <div id="badge-challenge-msg" class="hidden mt-3 p-3 rounded-xl flex items-start gap-2"></div>
           <div id="badge-streak-info" class="mt-3 text-xs text-center text-gray-400"></div>
 
           <!-- 👩‍🏫 선생님 수여 뱃지 영역 -->
@@ -1020,6 +995,7 @@
 
     let caffeineLogs = [];
     let sleepLogs = [];
+    let badgeConfig = null; // 교사가 설정한 뱃지 구성 (getBadgeConfig에서 로드)
     let editingId = null;
     let editingType = null;
     let autoRefreshInterval = null;
@@ -1109,6 +1085,7 @@
           startAutoRefresh();
           setTimeout(checkReplyBubble, 1500);
           setTimeout(checkTeacherAwards, 2000);
+          setTimeout(loadBadgeConfig, 800);
 
           // ⭐ 분석 중이면 GAS 호출 계열(loadCaffeineLogs, loadSleepLogs, refreshData, loadCaffeineDbFromGAS)을
           //    분석 완료까지 대기 후 실행 (최대 30초 폴링)
@@ -1149,6 +1126,7 @@
       startAutoRefresh();
       setTimeout(checkReplyBubble, 1500);
       setTimeout(checkTeacherAwards, 2000);
+      setTimeout(loadBadgeConfig, 800);
       initCalendarDate();
       showTab('dashboard');
     }
@@ -4476,54 +4454,45 @@
       panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
+    // ── 뱃지 설정 서버에서 로드 ─────────────────────────────────
+    function loadBadgeConfig() {
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result && result.success && result.config) {
+            badgeConfig = result.config;
+            updateBadges(); // 설정 로드 후 즉시 뱃지 다시 렌더
+          }
+        })
+        .withFailureHandler(function(err) {
+          console.warn('[뱃지설정] 로드 실패:', err);
+        })
+        .getBadgeConfig();
+    }
+
     // 뱃지 업데이트 로직
     function updateBadges() {
       const today = getTodayKST();
 
-      // ────────────────────────────────────────
-      // 1) 오늘의 실천 – 카페인 / 수면 분리
-      // ────────────────────────────────────────
-      const todaySleep = getSleepLogForDate(today);
-      const todayCaf   = getCaffeineLogsForDate(today);
-      const hasTodayCaf   = todayCaf.length > 0;
-      const hasTodaySleep = !!todaySleep;
+      // 1) 오늘의 실천
+      const hasTodayCaf   = getCaffeineLogsForDate(today).length > 0;
+      const hasTodaySleep = !!getSleepLogForDate(today);
 
-      // ────────────────────────────────────────
-      // 2) 연속 기록 계산 (수면 OR 카페인 중 하나라도 있으면 그날 기록 있음)
-      //    · 오늘 기록 있으면 streak 유지
-      //    · 오늘 기록 없고 어제도 없으면 → 연속 끊김
-      // ────────────────────────────────────────
+      // 2) 기록일 Set 구성 (수면 OR 카페인 중 하나라도 있으면 기록 있음)
       const recordedDates = new Set();
       sleepLogs.forEach(log => { if (log.date) recordedDates.add(log.date); });
-      caffeineLogs.forEach(log => {
-        const d = getLogDateKST(log.time);
-        if (d) recordedDates.add(d);
-      });
+      caffeineLogs.forEach(log => { const d = getLogDateKST(log.time); if (d) recordedDates.add(d); });
 
-      // 연속 일수 계산: 오늘 ~ 과거 방향으로 연속된 날짜 수
+      // 3) 연속일 계산
       function calcStreak() {
         let streak = 0;
         const cur = new Date(today + 'T00:00:00');
-        // 오늘 기록이 없으면 어제부터 시작 (오늘 아직 기록 안 했을 수도 있으니 어제부터 세기)
-        // 단, 오늘 기록 있으면 오늘부터 세기
-        if (!recordedDates.has(today)) {
-          cur.setDate(cur.getDate() - 1); // 어제부터 확인
-        }
+        if (!recordedDates.has(today)) cur.setDate(cur.getDate() - 1);
         while (true) {
           const ds = cur.toISOString().split('T')[0];
-          if (recordedDates.has(ds)) {
-            streak++;
-            cur.setDate(cur.getDate() - 1);
-          } else {
-            break;
-          }
+          if (recordedDates.has(ds)) { streak++; cur.setDate(cur.getDate() - 1); } else break;
         }
         return streak;
       }
-
-      const currentStreak = calcStreak();
-
-      // 마지막 기록일 이후 공백 일수 (오늘 기록 있으면 0)
       function calcGapDays() {
         if (recordedDates.has(today)) return 0;
         let gap = 0;
@@ -4532,159 +4501,147 @@
         for (let i = 0; i < 30; i++) {
           const ds = cur.toISOString().split('T')[0];
           if (recordedDates.has(ds)) break;
-          gap++;
-          cur.setDate(cur.getDate() - 1);
+          gap++; cur.setDate(cur.getDate() - 1);
         }
         return gap;
       }
+      const currentStreak = calcStreak();
+      const gapDays       = calcGapDays();
+      const totalCount    = recordedDates.size; // 전체 누적 기록일 수
 
-      const gapDays = calcGapDays();
-
-      // ────────────────────────────────────────
-      // 3) 월간 마스터: 현재 보는 달 유니크 기록일 수
-      // ────────────────────────────────────────
-      const ym = `${calendarYear}-${String(calendarMonth + 1).padStart(2,'0')}`;
-      const monthDates = new Set([
-        ...sleepLogs.filter(l => l.date && l.date.startsWith(ym)).map(l => l.date),
-        ...caffeineLogs.map(l => getLogDateKST(l.time)).filter(d => d && d.startsWith(ym))
-      ]);
-      const monthRecordCount = monthDates.size;
-
-      // ────────────────────────────────────────
-      // 4) 뱃지 렌더 헬퍼
-      // ────────────────────────────────────────
-      function setBadge2Active(id, iconId, labelId, subId, labelHTML, subText, bgClass, labelClass) {
+      // 4) 오늘의 실천 뱃지 (고정)
+      function _setActive(id, iconId, labelId, labelHTML, bgClass, txtClass) {
         const el = document.getElementById(id);
-        const iconEl = document.getElementById(iconId);
-        const labelEl = document.getElementById(labelId);
-        const subEl = subId ? document.getElementById(subId) : null;
-        if (!el || !iconEl || !labelEl) return;
+        const ic = document.getElementById(iconId);
+        const lb = document.getElementById(labelId);
+        if (!el || !ic || !lb) return;
         el.className = `flex items-center gap-3 p-3 rounded-2xl transition-all duration-500 ${bgClass}`;
-        iconEl.className = 'text-3xl flex-shrink-0';
-        labelEl.className = `text-xs font-bold leading-tight ${labelClass}`;
-        labelEl.innerHTML = labelHTML;
-        if (subEl) { subEl.className = `text-[10px] mt-0.5 ${labelClass} opacity-80`; subEl.textContent = subText; }
+        ic.className = 'text-3xl flex-shrink-0';
+        lb.className = `text-xs font-bold leading-tight ${txtClass}`;
+        lb.innerHTML = labelHTML;
       }
-      function setBadge2Inactive(id, iconId, labelId, subId, labelHTML, subText) {
+      function _setInactive(id, iconId, labelId, labelHTML) {
         const el = document.getElementById(id);
-        const iconEl = document.getElementById(iconId);
-        const labelEl = document.getElementById(labelId);
-        const subEl = subId ? document.getElementById(subId) : null;
-        if (!el || !iconEl || !labelEl) return;
+        const ic = document.getElementById(iconId);
+        const lb = document.getElementById(labelId);
+        if (!el || !ic || !lb) return;
         el.className = 'flex items-center gap-3 p-3 rounded-2xl bg-gray-100 transition-all duration-500';
-        iconEl.className = 'text-3xl flex-shrink-0 grayscale opacity-40';
-        labelEl.className = 'text-xs font-bold text-gray-400 leading-tight';
-        labelEl.innerHTML = labelHTML;
-        if (subEl) { subEl.className = 'text-[10px] text-gray-400 mt-0.5'; subEl.textContent = subText; }
+        ic.className = 'text-3xl flex-shrink-0 grayscale opacity-40';
+        lb.className = 'text-xs font-bold text-gray-400 leading-tight';
+        lb.innerHTML = labelHTML;
       }
 
-      // ────────────────────────────────────────
-      // 5) 각 뱃지 적용
-      // ────────────────────────────────────────
+      if (hasTodayCaf)   _setActive('badge-daily-caf','badge-daily-caf-icon','badge-daily-caf-label','카페인<br>오늘 기록','bg-orange-100','text-orange-700');
+      else               _setInactive('badge-daily-caf','badge-daily-caf-icon','badge-daily-caf-label','카페인<br>오늘 기록');
+      if (hasTodaySleep) _setActive('badge-daily-sleep','badge-daily-sleep-icon','badge-daily-sleep-label','수면<br>오늘 기록','bg-blue-100','text-blue-700');
+      else               _setInactive('badge-daily-sleep','badge-daily-sleep-icon','badge-daily-sleep-label','수면<br>오늘 기록');
 
-      // ☕ 카페인 오늘 기록
-      if (hasTodayCaf) {
-        setBadge2Active('badge-daily-caf','badge-daily-caf-icon','badge-daily-caf-label', null,
-          '카페인<br>오늘 기록', '', 'bg-orange-100', 'text-orange-700');
-      } else {
-        setBadge2Inactive('badge-daily-caf','badge-daily-caf-icon','badge-daily-caf-label', null,
-          '카페인<br>오늘 기록', '');
-      }
+      // 5) 챌린지 뱃지 동적 렌더
+      const grid = document.getElementById('challengeBadgeGrid');
+      if (grid) {
+        const cfg = badgeConfig;
 
-      // 😴 수면 오늘 기록
-      if (hasTodaySleep) {
-        setBadge2Active('badge-daily-sleep','badge-daily-sleep-icon','badge-daily-sleep-label', null,
-          '수면<br>오늘 기록', '', 'bg-blue-100', 'text-blue-700');
-      } else {
-        setBadge2Inactive('badge-daily-sleep','badge-daily-sleep-icon','badge-daily-sleep-label', null,
-          '수면<br>오늘 기록', '');
-      }
+        // 챌린지 이름 표시
+        const nameEl = document.getElementById('badge-challenge-name');
+        if (nameEl) nameEl.textContent = (cfg && cfg.challengeName) ? '[ ' + cfg.challengeName + ' ]' : '';
 
-      // 🌱 습관의 시작 (3일 연속 기록)
-      const last3Days = [0, 1, 2].map(n => {
-        const d = new Date(today + 'T00:00:00');
-        d.setDate(d.getDate() - n);
-        return d.toISOString().split('T')[0];
-      });
-      const habitStart = last3Days.every(d => recordedDates.has(d));
-      if (habitStart) {
-        setBadge2Active('badge-habit-start','badge-habit-start-icon','badge-habit-start-label','badge-habit-start-sub',
-          '습관의<br>시작', '3일 연속 🌱', 'bg-emerald-100', 'text-emerald-700');
-      } else {
-        const doneCount = last3Days.filter(d => recordedDates.has(d)).length;
-        setBadge2Inactive('badge-habit-start','badge-habit-start-icon','badge-habit-start-label','badge-habit-start-sub',
-          '습관의<br>시작', `${doneCount}/3일 기록`);
-      }
-
-      // 🏆 꾸준한 습관 (연속 7일+, 3일 공백 시 소멸 경고)
-      const streakActive = currentStreak >= 7;
-      if (streakActive) {
-        setBadge2Active('badge-streak','badge-streak-icon','badge-streak-label','badge-streak-sub',
-          '꾸준한<br>습관', `연속 ${currentStreak}일 🔥`, 'bg-yellow-100', 'text-yellow-700');
-      } else {
-        setBadge2Inactive('badge-streak','badge-streak-icon','badge-streak-label','badge-streak-sub',
-          '꾸준한<br>습관', `연속 ${currentStreak}일`);
-      }
-
-      // 🌟 월간 마스터
-      if (monthRecordCount >= 20) {
-        setBadge2Active('badge-monthly','badge-monthly-icon','badge-monthly-label','badge-monthly-sub',
-          '월간<br>마스터', `${monthRecordCount}일 기록 ✨`, 'bg-purple-100', 'text-purple-700');
-      } else {
-        setBadge2Inactive('badge-monthly','badge-monthly-icon','badge-monthly-label','badge-monthly-sub',
-          '월간<br>마스터', `${monthRecordCount}일 기록`);
-      }
-
-      // ────────────────────────────────────────
-      // 6) 연속기록 소멸 경고 표시
-      //    · 공백 1~2일: 주의 (노랑)
-      //    · 공백 3일+: 위험 (빨강) — 꾸준한 습관 뱃지 사라짐 설명
-      // ────────────────────────────────────────
-      const warningEl  = document.getElementById('badge-streak-warning');
-      const warningTxt = document.getElementById('badge-streak-warning-text');
-      if (warningEl && warningTxt) {
-        if (gapDays >= 3) {
-          // 뱃지 소멸 상태
-          warningEl.className = 'mt-3 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2';
-          warningTxt.className = 'text-xs text-red-600 leading-relaxed';
-          warningTxt.innerHTML = `<b>${gapDays}일째 기록 없음</b> — 연속 기록이 끊겼어요 😢<br>🏆 꾸준한 습관 뱃지는 <b>연속 기록이 3일 이상 끊기면 사라져요.</b> 오늘 기록을 남기고 다시 도전해보세요!`;
-          warningEl.classList.remove('hidden');
-        } else if (gapDays === 2) {
-          // 내일 끊김 경고
-          warningEl.className = 'mt-3 p-3 bg-orange-50 border border-orange-200 rounded-xl flex items-start gap-2';
-          warningTxt.className = 'text-xs text-orange-600 leading-relaxed';
-          warningTxt.innerHTML = `<b>이틀째 기록 없음</b> — 오늘 기록 안 하면 내일 연속 기록이 끊겨요! 🏆<br>꾸준한 습관 뱃지는 <b>3일 이상 공백이 생기면 소멸</b>합니다.`;
-          warningEl.classList.remove('hidden');
-        } else if (gapDays === 1 && currentStreak >= 5) {
-          // streak 5일 이상인데 오늘 아직 기록 안 한 경우 살짝 알림
-          warningEl.className = 'mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-xl flex items-start gap-2';
-          warningTxt.className = 'text-xs text-yellow-700 leading-relaxed';
-          warningTxt.innerHTML = `현재 연속 <b>${currentStreak}일!</b> 오늘도 기록을 남기면 🏆 뱃지를 지킬 수 있어요.`;
-          warningEl.classList.remove('hidden');
+        if (!cfg || !cfg.badges || cfg.badges.length === 0) {
+          // 서버 설정 없음 — 기본 안내
+          grid.innerHTML = '<p class="col-span-2 text-xs text-gray-400 text-center py-2">교사가 챌린지를 설정하면 여기에 뱃지가 나타나요!</p>';
         } else {
-          warningEl.classList.add('hidden');
-        }
-      }
+          grid.innerHTML = '';
+          let nextTarget = null; // 가장 가까운 미달성 뱃지
 
-      // ────────────────────────────────────────
-      // 7) 하단 진행 안내 텍스트
-      // ────────────────────────────────────────
-      const infoEl = document.getElementById('badge-streak-info');
-      if (infoEl) {
-        const parts = [];
-        if (!hasTodayCaf) parts.push('카페인 기록 ☕');
-        if (!hasTodaySleep) parts.push('수면 기록 😴');
-        if (parts.length > 0) {
-          infoEl.textContent = '오늘 아직: ' + parts.join(', ') + ' 남았어요';
-        } else if (!habitStart) {
-          const doneCount = last3Days.filter(d => recordedDates.has(d)).length;
-          infoEl.textContent = `연속 ${doneCount}일 / 3일 달성하면 🌱 습관의 시작 활성화`;
-        } else if (!streakActive) {
-          infoEl.textContent = `연속 ${currentStreak}일 / 7일 달성하면 🏆 활성화`;
-        } else if (monthRecordCount < 20) {
-          infoEl.textContent = `이번 달 ${monthRecordCount}일 / 20일 달성하면 🌟 활성화`;
-        } else {
-          infoEl.textContent = '모든 뱃지 달성! 오늘도 건강한 하루 💪';
+          cfg.badges.forEach(function(badge) {
+            const val    = badge.type === 'streak' ? currentStreak : totalCount;
+            const goal   = badge.days || 1;
+            const earned = val >= goal;
+            const diff   = goal - val;
+            if (!earned && !nextTarget) nextTarget = { badge, val, diff };
+
+            const div = document.createElement('div');
+            div.className = 'flex items-center gap-3 p-3 rounded-2xl transition-all duration-500';
+
+            if (earned) {
+              // ✅ 달성
+              div.style.cssText = `background:${badge.bg || '#ecfdf5'};`;
+              div.innerHTML = `
+                <span class="text-3xl flex-shrink-0">${badge.emoji || '🏅'}</span>
+                <div class="min-w-0">
+                  <p class="text-xs font-bold leading-tight" style="color:${badge.color || '#059669'};">${badge.name}</p>
+                  <p class="text-[10px] mt-0.5 font-semibold" style="color:${badge.color || '#059669'};">
+                    ${badge.type === 'streak' ? goal + '일 연속 달성! 🎉' : goal + '번 기록 달성! 🎉'}
+                  </p>
+                </div>`;
+            } else if (diff <= 2 && diff > 0) {
+              // 🔥 거의 달성 — 강조
+              div.style.cssText = 'background:#fffbeb;border:1.5px solid #fbbf24;';
+              div.innerHTML = `
+                <span class="text-3xl flex-shrink-0" style="opacity:0.8;">${badge.emoji || '🏅'}</span>
+                <div class="min-w-0">
+                  <p class="text-xs font-bold leading-tight text-yellow-700">${badge.name}</p>
+                  <p class="text-[10px] mt-0.5 text-yellow-600 font-semibold">
+                    ${diff}${badge.type === 'streak' ? '일' : '번'} 더! 거의 다 왔어요! 💪
+                  </p>
+                </div>`;
+            } else {
+              // ⬜ 미달성
+              const typeLabel = badge.type === 'streak'
+                ? `연속 ${val}/${goal}일`
+                : `누적 ${val}/${goal}번`;
+              div.style.cssText = 'background:#f3f4f6;';
+              div.innerHTML = `
+                <span class="text-3xl flex-shrink-0 grayscale opacity-40">${badge.emoji || '🏅'}</span>
+                <div class="min-w-0">
+                  <p class="text-xs font-bold text-gray-400 leading-tight">${badge.name}</p>
+                  <p class="text-[10px] text-gray-400 mt-0.5">${typeLabel}</p>
+                </div>`;
+            }
+            grid.appendChild(div);
+          });
+
+          // 6) 경고 / 응원 메시지
+          const msgEl = document.getElementById('badge-challenge-msg');
+          if (msgEl) {
+            // 연속 뱃지가 하나라도 있는지 확인
+            const hasStreakBadge = cfg.badges.some(b => b.type === 'streak');
+            if (hasStreakBadge && gapDays >= 2) {
+              const color = gapDays >= 3 ? 'red' : 'orange';
+              const txt = gapDays >= 3
+                ? `<b>${gapDays}일째 기록 없음</b> — 연속 기록이 끊겼어요 😢<br>연속 뱃지는 <b>하루라도 빠지면 처음부터 다시!</b> 오늘 기록하고 재도전해요.`
+                : `<b>이틀째 기록 없음</b> — 오늘 기록 안 하면 연속이 끊겨요! 지금 바로 기록하세요 🔥`;
+              msgEl.className = `mt-3 p-3 bg-${color}-50 border border-${color}-200 rounded-xl flex items-start gap-2`;
+              msgEl.innerHTML = `<span>⚠️</span><p class="text-xs text-${color}-600 leading-relaxed">${txt}</p>`;
+              msgEl.classList.remove('hidden');
+            } else if (nextTarget && nextTarget.diff <= 2) {
+              const t = nextTarget;
+              const typeStr = t.badge.type === 'streak' ? `연속 ${t.diff}일` : `${t.diff}번`;
+              msgEl.className = 'mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-xl flex items-start gap-2';
+              msgEl.innerHTML = `<span>💪</span><p class="text-xs text-yellow-700 leading-relaxed"><b>${typeStr}만 더!</b> 지금 기록하면 ${t.badge.emoji} <b>${t.badge.name}</b> 뱃지를 받을 수 있어요!</p>`;
+              msgEl.classList.remove('hidden');
+            } else {
+              msgEl.classList.add('hidden');
+            }
+          }
+
+          // 7) 하단 안내 텍스트
+          const infoEl = document.getElementById('badge-streak-info');
+          if (infoEl) {
+            const todayParts = [];
+            if (!hasTodayCaf)   todayParts.push('카페인 기록 ☕');
+            if (!hasTodaySleep) todayParts.push('수면 기록 😴');
+            if (todayParts.length > 0) {
+              infoEl.textContent = '오늘 아직: ' + todayParts.join(', ') + ' 남았어요';
+            } else if (nextTarget) {
+              const t = nextTarget;
+              const typeStr = t.badge.type === 'streak'
+                ? `연속 ${t.val}일 / ${t.badge.days}일`
+                : `누적 ${t.val}번 / ${t.badge.days}번`;
+              infoEl.textContent = `${typeStr} — ${t.badge.emoji} ${t.badge.name} 뱃지 도전 중!`;
+            } else {
+              infoEl.textContent = '모든 챌린지 뱃지 달성! 정말 대단해요 💪';
+            }
+          }
         }
       }
     }
