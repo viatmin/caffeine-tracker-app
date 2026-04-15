@@ -2012,8 +2012,8 @@ function renderStudentGrid(students){
         // 오늘 기록 여부
         const todayCaf=caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(filterDate));
         const todaySleep=sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===filterDate);
-        const todayCafBadge=todayCaf?'<span class="rec-badge rec-ok">✓ 기록</span>':'<span class="rec-badge rec-none">미기록</span>';
-        const todaySleepBadge=todaySleep?'<span class="rec-badge rec-ok">✓ 기록</span>':'<span class="rec-badge rec-none">미기록</span>';
+        const todayCafBadge=todayCaf?'<span class="rec-badge rec-ok">✓ 기록</span>':'<span class="rec-badge rec-none">오늘 미기록</span>';
+        const todaySleepBadge=todaySleep?'<span class="rec-badge rec-ok">✓ 기록</span>':'<span class="rec-badge rec-none">오늘 미기록</span>';
         // 최근 기록
         const rc=getRecentCaf(s.학번);
         const rs=getRecentSleep(s.학번);
