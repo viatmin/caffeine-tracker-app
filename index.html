@@ -1293,16 +1293,9 @@
       }
       if(id === 'settings') {
         setTimeout(loadMyInquiries, 300);
-        // 설정 탭 진입 = 문의 내역 확인 → 버블 해제
-        google.script.run
-          .withSuccessHandler(res => {
-            if (!res || !res.success) return;
-            const repliedCount = (res.data || []).filter(i => i.status === '응답완료').length;
-            setSeenRepliedCount(repliedCount);
-            updateReplyBubble(repliedCount);
-          })
-          .withFailureHandler(() => {})
-          .getMyInquiries(user && user.studentId);
+        // 설정 탭 진입 = 문의 내역 확인 → 버블 숨김
+        const bubble = document.getElementById('replyBubble');
+        if (bubble) bubble.style.display = 'none';
       }
       if(id === 'calendar') {
         // ⭐ 교사 뱃지 최신 상태 로드 완료 후 달력 재렌더 (🏅 마커 즉시 반영)
@@ -3590,40 +3583,87 @@
       if (autoRefreshInterval) { clearInterval(autoRefreshInterval); autoRefreshInterval = null; }
     }
 
-    // ── 답변 버블 관리 ──────────────────────────────
-    // 이미 확인한 응답완료 건 수를 localStorage에 저장해서 새 답변만 감지
-    function getSeenRepliedCount() {
-      try { return parseInt(localStorage.getItem('seenRepliedCount_' + (user && user.studentId)) || '0'); } catch(e) { return 0; }
+    // ── 문의 답변 팝업 관리 ──────────────────────────────
+    // 확인한 답변은 "timestamp|title" 키로 localStorage에 저장
+    function _replySeenKey() { return 'seenReplyKeys_' + (user && user.studentId); }
+    function getSeenReplyKeys() {
+      try { return JSON.parse(localStorage.getItem(_replySeenKey()) || '[]'); } catch(e) { return []; }
     }
-    function setSeenRepliedCount(n) {
-      try { localStorage.setItem('seenRepliedCount_' + (user && user.studentId), String(n)); } catch(e) {}
-    }
-    function updateReplyBubble(repliedCount) {
-      const bubble = document.getElementById('replyBubble');
-      if (!bubble) return;
-      const seen = getSeenRepliedCount();
-      const newCount = repliedCount - seen;
-      if (newCount > 0) {
-        bubble.textContent = newCount > 9 ? '9+' : newCount;
-        bubble.style.display = 'inline-block';
-      } else {
-        bubble.style.display = 'none';
-      }
+    function markReplyKeysSeen(items) {
+      try {
+        const keys = items.map(i => i.timestamp + '|' + i.title);
+        const prev = getSeenReplyKeys();
+        localStorage.setItem(_replySeenKey(), JSON.stringify([...new Set([...prev, ...keys])]));
+      } catch(e) {}
     }
     function checkReplyBubble() {
       if (!user || !user.studentId) return;
       google.script.run
         .withSuccessHandler(res => {
           if (!res || !res.success) return;
-          const repliedCount = (res.data || []).filter(i => i.status === '응답완료').length;
-          const seen = getSeenRepliedCount();
-          if (repliedCount > seen) {
-            updateReplyBubble(repliedCount);
-            showUpdateNotification('💬 선생님 답변을 확인하세요!');
-          }
+          const replied = (res.data || []).filter(i => i.status === '응답완료' && i.reply);
+          const seen = getSeenReplyKeys();
+          const newReplies = replied.filter(i => !seen.includes(i.timestamp + '|' + i.title));
+          if (newReplies.length > 0) showReplyPopup(newReplies);
         })
         .withFailureHandler(() => {})
         .getMyInquiries(user.studentId);
+    }
+    function showReplyPopup(replies) {
+      if (document.getElementById('inquiryReplyPopup')) return;
+      const overlay = document.createElement('div');
+      overlay.id = 'inquiryReplyPopup';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+
+      const itemsHtml = replies.map(item => `
+        <div style="margin-bottom:14px;">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
+            <div style="max-width:80%;background:#f3f4f6;border-radius:16px 16px 4px 16px;padding:10px 14px;">
+              <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:3px;">${item.title}</div>
+              <div style="font-size:12px;color:#6b7280;line-height:1.5;">${item.content}</div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-start;">
+            <div style="max-width:85%;background:linear-gradient(135deg,#6366f1,#4f46e5);border-radius:16px 16px 16px 4px;padding:10px 14px;box-shadow:0 2px 8px rgba(99,102,241,0.25);">
+              <div style="font-size:11px;color:rgba(255,255,255,0.75);margin-bottom:4px;">선생님 답변 · ${formatTimestamp(item.replyTime)}</div>
+              <div style="font-size:13px;color:white;line-height:1.6;white-space:pre-wrap;">${item.reply}</div>
+            </div>
+          </div>
+        </div>`).join('');
+
+      overlay.innerHTML = `
+        <div style="background:white;border-radius:24px;width:100%;max-width:380px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.25);">
+          <div style="background:linear-gradient(135deg,#6366f1,#4f46e5);padding:20px 24px;">
+            <div style="font-size:22px;margin-bottom:4px;">💬</div>
+            <div style="font-weight:700;font-size:17px;color:white;">선생님이 답변해 주셨어요!</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px;">새 답변 ${replies.length}건</div>
+          </div>
+          <div style="padding:20px;max-height:55vh;overflow-y:auto;">${itemsHtml}</div>
+          <div style="padding:0 20px 20px;display:flex;gap:10px;">
+            <button id="replyPopupConfirmBtn" style="flex:1;padding:13px;background:#f3f4f6;color:#374151;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;">확인했습니다</button>
+            <button id="replyPopupAskBtn" style="flex:1;padding:13px;background:#6366f1;color:white;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;">추가 문의하기</button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+
+      const close = () => {
+        markReplyKeysSeen(replies);
+        const bubble = document.getElementById('replyBubble');
+        if (bubble) bubble.style.display = 'none';
+        overlay.remove();
+        const body = document.getElementById('inquiryBody');
+        if (body && !body.classList.contains('hidden')) loadMyInquiries();
+      };
+      document.getElementById('replyPopupConfirmBtn').onclick = close;
+      document.getElementById('replyPopupAskBtn').onclick = () => {
+        close();
+        // 문의하기 섹션 열기
+        const inquiryBody = document.getElementById('inquiryBody');
+        if (inquiryBody && inquiryBody.classList.contains('hidden')) toggleInquirySection();
+        const section = document.getElementById('inquirySection');
+        if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setTimeout(() => document.getElementById('inquiryTitle') && document.getElementById('inquiryTitle').focus(), 400);
+      };
     }
 
     // ═══════════════════════════════════════════════════════
@@ -4021,6 +4061,15 @@
           updateMsgBubble(0);
           container.innerHTML = res.data.map(m => {
             const isNew = m.readStatus === '미읽음';
+            const hasReply = !!m.studentReply;
+            const replySection = hasReply
+              ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 12px;margin-top:10px;">
+                   <div style="font-size:11px;color:#3b82f6;font-weight:700;margin-bottom:4px;">내 답장</div>
+                   <div style="font-size:13px;color:#1e40af;white-space:pre-wrap;">${m.studentReply}</div>
+                   <div style="font-size:10px;color:#93c5fd;margin-top:4px;">${formatMsgDate(m.studentReplyTime)}</div>
+                   <button onclick="openReplyModal(${m.rowIndex}, \`${m.title.replace(/`/g,'\\`')}\`, true)" style="margin-top:6px;font-size:11px;color:#6b7280;background:none;border:1px solid #e5e7eb;border-radius:6px;padding:2px 8px;cursor:pointer;">수정</button>
+                 </div>`
+              : `<button onclick="openReplyModal(${m.rowIndex}, \`${m.title.replace(/`/g,'\\`')}\`, false)" style="margin-top:10px;display:inline-flex;align-items:center;gap:4px;background:#10b981;color:white;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">💬 답장하기</button>`;
             return `<div class="border rounded-xl p-4 mb-3 ${isNew ? 'border-emerald-300 bg-emerald-50' : 'border-gray-100'}">
               <div class="flex items-start justify-between gap-2 mb-1">
                 <span class="font-bold text-sm text-gray-800">${m.title}</span>
@@ -4028,6 +4077,7 @@
               </div>
               <div class="text-xs text-gray-400 mb-2">${formatMsgDate(m.timestamp)}</div>
               <div class="text-sm text-gray-700 whitespace-pre-wrap">${m.content}</div>
+              ${replySection}
             </div>`;
           }).join('');
         })
@@ -4074,21 +4124,37 @@
           <div style="font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px;">새 메시지 ${messages.length}건</div>
         </div>
         <div style="padding:20px;max-height:55vh;overflow-y:auto;">${msgsHtml}</div>
-        <div style="padding:0 20px 20px;">
-          <button id="newMsgCloseBtn" style="width:100%;padding:14px;background:#10b981;color:white;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;">확인했습니다</button>
+        <div style="padding:0 20px 20px;display:flex;gap:10px;">
+          <button id="newMsgCloseBtn" style="flex:1;padding:14px;background:#f3f4f6;color:#374151;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;">확인했습니다</button>
+          <button id="newMsgReplyBtn" style="flex:1;padding:14px;background:#10b981;color:white;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;">💬 답장하기</button>
         </div>`;
 
       overlay.appendChild(box);
       document.body.appendChild(overlay);
 
-      document.getElementById('newMsgCloseBtn').onclick = () => {
-        // 읽음 처리
+      const closeModal = () => {
         messages.forEach(m => google.script.run.markTeacherMessageRead(m.rowIndex));
         overlay.remove();
         updateMsgBubble(0);
-        // 메시지함이 열려 있으면 새로고침
         const body = document.getElementById('teacherMsgBody');
         if (body && !body.classList.contains('hidden')) loadTeacherMessages();
+      };
+
+      document.getElementById('newMsgCloseBtn').onclick = closeModal;
+
+      document.getElementById('newMsgReplyBtn').onclick = () => {
+        closeModal();
+        // 메시지함 열기 후 답장 모달
+        const msgBody = document.getElementById('teacherMsgBody');
+        if (msgBody && msgBody.classList.contains('hidden')) toggleTeacherMsgSection();
+        if (messages.length === 1) {
+          // 단일 메시지면 바로 답장 모달
+          setTimeout(() => openReplyModal(messages[0].rowIndex, messages[0].title, false), 300);
+        } else {
+          // 복수 메시지면 메시지함으로 스크롤
+          const section = document.getElementById('teacherMsgSection');
+          if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       };
     }
 
@@ -4104,6 +4170,52 @@
         bubble.style.display = 'none';
         if (badge) badge.style.display = 'none';
       }
+    }
+
+    // ── 학생→선생님 답장 기능 ──────────────────────────────────────────────────
+    function openReplyModal(rowIndex, title, isEdit) {
+      if (document.getElementById('studentReplyModal')) document.getElementById('studentReplyModal').remove();
+      const overlay = document.createElement('div');
+      overlay.id = 'studentReplyModal';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+      overlay.innerHTML = `
+        <div style="background:white;border-radius:24px;width:100%;max-width:380px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.25);">
+          <div style="background:linear-gradient(135deg,#3b82f6,#2563eb);padding:18px 22px;">
+            <div style="font-size:20px;margin-bottom:4px;">💬</div>
+            <div style="font-weight:700;font-size:16px;color:white;">선생님께 답장하기</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px;">${title}</div>
+          </div>
+          <div style="padding:18px 20px;">
+            <textarea id="studentReplyText" rows="5" placeholder="답장 내용을 입력하세요..." style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:12px;font-size:14px;resize:none;font-family:inherit;outline:none;box-sizing:border-box;"></textarea>
+          </div>
+          <div style="padding:0 20px 20px;display:flex;gap:8px;">
+            <button onclick="document.getElementById('studentReplyModal').remove()" style="flex:1;padding:12px;background:#f3f4f6;color:#374151;border:none;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;">취소</button>
+            <button id="studentReplySendBtn" onclick="submitStudentReply(${rowIndex})" style="flex:2;padding:12px;background:#3b82f6;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;">${isEdit ? '수정하기' : '답장 보내기'}</button>
+          </div>
+        </div>`;
+      document.body.appendChild(overlay);
+    }
+
+    function submitStudentReply(rowIndex) {
+      const text = document.getElementById('studentReplyText').value.trim();
+      if (!text) { alert('답장 내용을 입력해주세요.'); return; }
+      const btn = document.getElementById('studentReplySendBtn');
+      btn.disabled = true; btn.textContent = '전송 중...';
+      google.script.run
+        .withSuccessHandler(res => {
+          if (res && res.success) {
+            document.getElementById('studentReplyModal').remove();
+            loadTeacherMessages();
+          } else {
+            btn.disabled = false; btn.textContent = '답장 보내기';
+            alert('전송에 실패했습니다. 다시 시도해주세요.');
+          }
+        })
+        .withFailureHandler(() => {
+          btn.disabled = false; btn.textContent = '답장 보내기';
+          alert('서버 연결에 실패했습니다.');
+        })
+        .replyToTeacherMessage(rowIndex, text);
     }
 
     function checkAppVersion() {
