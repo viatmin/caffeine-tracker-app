@@ -795,6 +795,31 @@
         </div>
 
 
+        <!-- 교사 메시지함 (토글) -->
+        <div class="bg-white rounded-[2rem] shadow-sm overflow-hidden" id="teacherMsgSection">
+          <button onclick="toggleTeacherMsgSection()"
+            class="w-full p-5 flex items-center justify-between hover:bg-gray-50 active:bg-gray-100 transition-colors">
+            <h4 class="font-bold text-lg flex items-center gap-2 pointer-events-none">
+              <i class="fa-solid fa-envelope text-emerald-600"></i> 교사 메시지함
+              <span id="msgUnreadBadge" style="display:none;background:#ef4444;color:white;font-size:11px;font-weight:700;min-width:18px;height:18px;border-radius:9px;padding:0 5px;line-height:18px;text-align:center;"></span>
+            </h4>
+            <i id="teacherMsgToggleIcon" class="fa-solid fa-chevron-down text-gray-400 transition-transform duration-300 pointer-events-none"></i>
+          </button>
+          <div id="teacherMsgBody" class="hidden border-t border-gray-100 px-5 pb-5">
+            <div class="flex items-center justify-between mt-4 mb-3">
+              <h5 class="font-bold text-sm text-gray-700 flex items-center gap-1">
+                <i class="fa-solid fa-inbox text-emerald-500"></i> 받은 메시지
+              </h5>
+              <button onclick="loadTeacherMessages()" class="text-xs text-emerald-600 font-bold hover:text-emerald-800">
+                <i class="fa-solid fa-rotate-right"></i> 새로고침
+              </button>
+            </div>
+            <div id="teacherMsgContainer">
+              <p class="text-center py-4 text-gray-400 text-xs">메시지를 불러오는 중...</p>
+            </div>
+          </div>
+        </div>
+
         <!-- 교사에게 문의하기 (토글) -->
         <div class="bg-white rounded-[2rem] shadow-sm overflow-hidden" id="inquirySection">
           <button onclick="toggleInquirySection()"
@@ -874,6 +899,7 @@
         <i class="fa-solid fa-gear text-xl"></i>
         <span class="text-[10px] mt-1">설정</span>
         <span id="replyBubble" style="display:none;position:absolute;top:4px;right:18%;background:#ef4444;color:white;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;padding:0 4px;line-height:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.3);"></span>
+        <span id="msgBubble" style="display:none;position:absolute;top:4px;right:4%;background:#10b981;color:white;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;padding:0 4px;line-height:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,0.3);"></span>
       </button>
     </nav>
 
@@ -950,6 +976,7 @@
   </div><!-- /mainApp -->
 
   <script>
+
     let user = null;
     let selectedDrink = { drink: '', mg: 0 };
     let selectedCondition = { emoji: '', score: 0 };
@@ -1084,7 +1111,8 @@
           checkAndLoadWeight();
           startAutoRefresh();
           setTimeout(checkReplyBubble, 1500);
-          setTimeout(checkTeacherAwards, 2000);
+          setTimeout(checkMsgBubble, 2000);
+          setTimeout(checkTeacherAwards, 2500);
           setTimeout(loadBadgeConfig, 800);
 
           // ⭐ 분석 중이면 GAS 호출 계열(loadCaffeineLogs, loadSleepLogs, refreshData, loadCaffeineDbFromGAS)을
@@ -1125,7 +1153,8 @@
       loadSleepLogs();
       startAutoRefresh();
       setTimeout(checkReplyBubble, 1500);
-      setTimeout(checkTeacherAwards, 2000);
+      setTimeout(checkMsgBubble, 2000);
+      setTimeout(checkTeacherAwards, 2500);
       setTimeout(loadBadgeConfig, 800);
       initCalendarDate();
       showTab('dashboard');
@@ -1970,6 +1999,15 @@
       if (dbVolumeInput) dbVolumeInput.value = '';
       if (dbCalcResult) dbCalcResult.classList.add('hidden');
       
+      // 교사 메시지함 초기화 (보안: 다른 학생이 볼 수 없도록)
+      const teacherMsgContainer = document.getElementById('teacherMsgContainer');
+      if (teacherMsgContainer) teacherMsgContainer.innerHTML = '<p class="text-center py-4 text-gray-400 text-xs">메시지를 불러오는 중...</p>';
+      const teacherMsgBody = document.getElementById('teacherMsgBody');
+      if (teacherMsgBody) teacherMsgBody.classList.add('hidden');
+      const teacherMsgToggleIcon = document.getElementById('teacherMsgToggleIcon');
+      if (teacherMsgToggleIcon) teacherMsgToggleIcon.style.transform = '';
+      updateMsgBubble(0);
+
       showTab('dashboard');
       console.log('로그아웃 완료');
     }
@@ -3813,6 +3851,8 @@
       checkReplyBubble();
       // 교사 수여 뱃지 감지
       checkTeacherAwards();
+      // 교사 메시지 감지 → 미읽음 있으면 자동 팝업
+      checkMsgBubble();
     }
     
     function showUpdateNotification(message) {
@@ -3898,6 +3938,15 @@
       return `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     }
 
+    function formatMsgDate(ts) {
+      if (!ts) return '';
+      const s = String(ts).replace(' ', 'T');
+      const d = new Date(s);
+      if (isNaN(d)) return ts;
+      const days = ['일','월','화','수','목','금','토'];
+      return `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}.(${days[d.getDay()]})`;
+    }
+
     function loadMyInquiries() {
       if (!user || !user.studentId) return;
       const container = document.getElementById('myInquiriesContainer');
@@ -3938,7 +3987,147 @@
         .getMyInquiries(user.studentId);
     }
 
+    // ── 교사 메시지함 기능 ──────────────────────────────────────────────────
+    function toggleTeacherMsgSection() {
+      const body = document.getElementById('teacherMsgBody');
+      const icon = document.getElementById('teacherMsgToggleIcon');
+      const opening = body.classList.contains('hidden');
+      body.classList.toggle('hidden');
+      icon.style.transform = opening ? 'rotate(180deg)' : '';
+      if (opening) loadTeacherMessages();
+    }
+
+    function loadTeacherMessages() {
+      if (!user || !user.studentId) return;
+      const container = document.getElementById('teacherMsgContainer');
+      container.innerHTML = '<p class="text-center py-4 text-gray-400 text-xs">불러오는 중...</p>';
+      google.script.run
+        .withSuccessHandler(res => {
+          if (!res || !res.success) {
+            container.innerHTML = '<p class="text-center py-3 text-red-400 text-xs">불러오기 실패</p>';
+            return;
+          }
+          if (!res.data || !res.data.length) {
+            container.innerHTML = '<p class="text-center py-4 text-gray-400 text-xs">받은 메시지가 없습니다.</p>';
+            updateMsgBubble(0);
+            return;
+          }
+          // 미읽음 메시지 읽음 처리
+          res.data.forEach(m => {
+            if (m.readStatus === '미읽음') {
+              google.script.run.markTeacherMessageRead(m.rowIndex);
+            }
+          });
+          updateMsgBubble(0);
+          container.innerHTML = res.data.map(m => {
+            const isNew = m.readStatus === '미읽음';
+            return `<div class="border rounded-xl p-4 mb-3 ${isNew ? 'border-emerald-300 bg-emerald-50' : 'border-gray-100'}">
+              <div class="flex items-start justify-between gap-2 mb-1">
+                <span class="font-bold text-sm text-gray-800">${m.title}</span>
+                ${isNew ? '<span style="background:#10b981;color:white;font-size:10px;font-weight:700;padding:1px 7px;border-radius:8px;">NEW</span>' : ''}
+              </div>
+              <div class="text-xs text-gray-400 mb-2">${formatMsgDate(m.timestamp)}</div>
+              <div class="text-sm text-gray-700 whitespace-pre-wrap">${m.content}</div>
+            </div>`;
+          }).join('');
+        })
+        .withFailureHandler(() => {
+          container.innerHTML = '<p class="text-center py-3 text-red-400 text-xs">GAS 연결 실패</p>';
+        })
+        .getTeacherMessages(user.studentId);
+    }
+
+    function checkMsgBubble() {
+      if (!user || !user.studentId) return;
+      google.script.run
+        .withSuccessHandler(res => {
+          if (!res || !res.success) return;
+          const unread = (res.data || []).filter(m => m.readStatus === '미읽음');
+          updateMsgBubble(unread.length);
+          if (unread.length > 0) showNewMsgModal(unread);
+        })
+        .getTeacherMessages(user.studentId);
+    }
+
+    function showNewMsgModal(messages) {
+      // 이미 열려 있으면 중복 방지
+      if (document.getElementById('newMsgModal')) return;
+
+      const overlay = document.createElement('div');
+      overlay.id = 'newMsgModal';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+
+      const box = document.createElement('div');
+      box.style.cssText = 'background:white;border-radius:24px;width:100%;max-width:380px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.25);';
+
+      const msgsHtml = messages.map(m => `
+        <div style="border:1px solid #d1fae5;border-radius:12px;padding:14px;margin-bottom:10px;background:#f0fdf4;">
+          <div style="font-weight:700;font-size:15px;color:#1f2937;margin-bottom:4px;">${m.title}</div>
+          <div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">${formatMsgDate(m.timestamp)}</div>
+          <div style="font-size:13px;color:#374151;white-space:pre-wrap;line-height:1.6;">${m.content}</div>
+        </div>`).join('');
+
+      box.innerHTML = `
+        <div style="background:linear-gradient(135deg,#10b981,#059669);padding:20px 24px;">
+          <div style="font-size:22px;margin-bottom:4px;">📨</div>
+          <div style="font-weight:700;font-size:17px;color:white;">선생님께서 메시지를 보내셨어요</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px;">새 메시지 ${messages.length}건</div>
+        </div>
+        <div style="padding:20px;max-height:55vh;overflow-y:auto;">${msgsHtml}</div>
+        <div style="padding:0 20px 20px;">
+          <button id="newMsgCloseBtn" style="width:100%;padding:14px;background:#10b981;color:white;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;">확인했습니다</button>
+        </div>`;
+
+      overlay.appendChild(box);
+      document.body.appendChild(overlay);
+
+      document.getElementById('newMsgCloseBtn').onclick = () => {
+        // 읽음 처리
+        messages.forEach(m => google.script.run.markTeacherMessageRead(m.rowIndex));
+        overlay.remove();
+        updateMsgBubble(0);
+        // 메시지함이 열려 있으면 새로고침
+        const body = document.getElementById('teacherMsgBody');
+        if (body && !body.classList.contains('hidden')) loadTeacherMessages();
+      };
+    }
+
+    function updateMsgBubble(count) {
+      const bubble = document.getElementById('msgBubble');
+      const badge = document.getElementById('msgUnreadBadge');
+      if (!bubble) return;
+      if (count > 0) {
+        bubble.textContent = count;
+        bubble.style.display = 'inline-block';
+        if (badge) { badge.textContent = count; badge.style.display = 'inline-block'; }
+      } else {
+        bubble.style.display = 'none';
+        if (badge) badge.style.display = 'none';
+      }
+    }
+
+    function checkAppVersion() {
+      try {
+        const currentVersion = document.lastModified;
+        const stored = localStorage.getItem('app_version');
+        if (stored && stored !== currentVersion) {
+          const toast = document.createElement('div');
+          toast.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:99999;background:#1f2937;color:white;padding:13px 22px;border-radius:14px;font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,0.3);display:flex;align-items:center;gap:10px;white-space:nowrap;';
+          toast.innerHTML = '🎉 <span>앱이 업데이트 되었습니다!</span>';
+          document.body.appendChild(toast);
+          setTimeout(() => {
+            toast.style.transition = 'opacity 0.5s';
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 500);
+          }, 3500);
+        }
+        localStorage.setItem('app_version', currentVersion);
+      } catch(e) {}
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+      checkAppVersion();
+
       document.getElementById('sid').addEventListener('keypress', (e) => { if(e.key === 'Enter') document.getElementById('sname').focus(); });
       document.getElementById('sname').addEventListener('keypress', (e) => { if(e.key === 'Enter') login(); });
 
