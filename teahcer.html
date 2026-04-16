@@ -764,6 +764,22 @@
             </div>
         </div>
         
+        <!-- 교사 발신 메시지 목록 -->
+        <div style="background:white;padding:24px;border-radius:16px;margin-bottom:24px;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                <h2 style="font-size:18px;font-weight:700;color:#1f2937;display:flex;align-items:center;gap:8px;">
+                    📤 교사 발신 메시지
+                </h2>
+                <button onclick="loadSentMessages()" class="btn btn-sm" style="background:#f3f4f6;color:#374151;">🔄 새로고침</button>
+            </div>
+            <div id="sentMessageList">
+                <div style="text-align:center;padding:30px;color:#9ca3af;">
+                    <div style="font-size:28px;margin-bottom:6px;">📤</div>
+                    <p style="font-size:14px;">발신 메시지를 로딩하고 있습니다...</p>
+                </div>
+            </div>
+        </div>
+
         <!-- 응답 모달 -->
         <div id="replyModal" style="display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);">
             <div id="replyModalInner" style="background:white;border-radius:16px;padding:28px;max-width:560px;width:calc(100% - 32px);margin:auto;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);box-shadow:0 20px 60px rgba(0,0,0,0.2);">
@@ -780,6 +796,26 @@
             </div>
         </div>
     </div>
+
+<!-- 메시지 작성 모달 -->
+<div id="msgSendModal" style="display:none;position:fixed;z-index:1100;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);">
+    <div style="background:white;border-radius:16px;padding:28px;max-width:520px;width:calc(100% - 32px);margin:auto;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+        <h3 style="font-size:18px;font-weight:700;margin-bottom:6px;color:#1f2937;">📨 학생에게 메시지 보내기</h3>
+        <div id="msgTargetLabel" style="font-size:13px;color:#6366f1;font-weight:600;margin-bottom:16px;"></div>
+        <input type="text" id="msgTitle" placeholder="제목을 입력하세요"
+            style="width:100%;padding:11px 14px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;font-family:inherit;outline:none;margin-bottom:12px;box-sizing:border-box;transition:border-color 0.2s;"
+            onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e5e7eb'">
+        <textarea id="msgContent" placeholder="메시지 내용을 입력하세요..." rows="5"
+            style="width:100%;padding:11px 14px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;font-family:inherit;outline:none;resize:none;box-sizing:border-box;transition:border-color 0.2s;"
+            onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e5e7eb'"></textarea>
+        <input type="hidden" id="msgTargetId">
+        <input type="hidden" id="msgTargetName">
+        <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end;">
+            <button onclick="closeMsgSendModal()" class="btn" style="background:#f3f4f6;color:#374151;flex:1;justify-content:center;">취소</button>
+            <button onclick="submitTeacherMsg()" class="btn btn-primary" style="flex:1;justify-content:center;">전송</button>
+        </div>
+    </div>
+</div>
 
     <div id="tab-settings" class="tab-content">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
@@ -973,6 +1009,7 @@
                 <button class="btn btn-green" onclick="requestAIAnalysis()" id="aiBtn">🤖 AI 건강분석</button>
                 <button class="btn btn-blue" onclick="exportPDF()">📄 PDF 저장</button>
                 <button class="btn" style="background:#f5f3ff;color:#6d28d9;border:none;" onclick="openManualAwardModal('single')">🏅 뱃지 수여</button>
+                <button class="btn" style="background:#ecfdf5;color:#065f46;border:none;" onclick="openMsgSendModal()">📨 메시지 보내기</button>
             </div>
             <div style="margin-bottom:20px;">
                 <div class="ai-toggle-header" onclick="toggleAI()">
@@ -1469,7 +1506,7 @@ function initFilters(){
     // 분석 탭 날짜 초기화
     ['cafDateFilter','sleepDateFilter'].forEach(id=>{const el=document.getElementById(id);if(el){el.value=today;el.max=today;}});
 }
-function switchTab(n,el){document.querySelectorAll('.tab-button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));if(el)el.classList.add('active');document.getElementById('tab-'+n).classList.add('active');if(n==='inquiries'){inquiryFilter='unanswered';loadInquiries();}if(n==='awards'){renderAwardsTab();}}
+function switchTab(n,el){document.querySelectorAll('.tab-button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));if(el)el.classList.add('active');document.getElementById('tab-'+n).classList.add('active');if(n==='inquiries'){inquiryFilter='unanswered';loadInquiries();loadSentMessages();}if(n==='awards'){renderAwardsTab();}}
 
 function updateDashboard(){
     const g=msGet('gradeFilter'), c=msGet('classFilter');
@@ -2577,6 +2614,15 @@ function formatTimestamp(ts) {
     return `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function formatMsgDate(ts) {
+    if (!ts) return '';
+    const s = String(ts).replace(' ', 'T');
+    const d = new Date(s);
+    if (isNaN(d)) return ts;
+    const days = ['일','월','화','수','목','금','토'];
+    return `${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}.(${days[d.getDay()]})`;
+}
+
 let allInquiries = [];
 let inquiryFilter = 'unanswered';
 
@@ -2730,6 +2776,97 @@ function confirmDeleteInquiry(rowIndex, title) {
         })
         .withFailureHandler(() => showTeacherModal('❌', '오류', 'GAS 연결 실패', 'error'))
         .deleteInquiry(rowIndex);
+}
+
+// ── 교사→학생 메시지 기능 ──────────────────────────────
+
+function openMsgSendModal() {
+    const id = currentStudentId;
+    const s = studentsData.find(st => st.학번 === id);
+    if (!s) return;
+    document.getElementById('msgTargetId').value = id;
+    document.getElementById('msgTargetName').value = s.이름;
+    document.getElementById('msgTargetLabel').textContent = `수신: ${s.이름} (${id})`;
+    document.getElementById('msgTitle').value = '';
+    document.getElementById('msgContent').value = '';
+    document.getElementById('msgSendModal').style.display = 'block';
+}
+
+function closeMsgSendModal() {
+    document.getElementById('msgSendModal').style.display = 'none';
+}
+
+function submitTeacherMsg() {
+    const title = document.getElementById('msgTitle').value.trim();
+    const content = document.getElementById('msgContent').value.trim();
+    const studentId = document.getElementById('msgTargetId').value;
+    const studentName = document.getElementById('msgTargetName').value;
+    if (!title) { alert('제목을 입력하세요.'); return; }
+    if (!content) { alert('메시지 내용을 입력하세요.'); return; }
+    const btn = document.querySelector('#msgSendModal .btn-primary');
+    btn.disabled = true; btn.textContent = '전송 중...';
+    google.script.run
+        .withSuccessHandler(res => {
+            btn.disabled = false; btn.textContent = '전송';
+            if (res && res.success) {
+                closeMsgSendModal();
+                showTeacherModal('✅', '전송 완료', `${studentName} 학생에게 메시지를 보냈습니다.`, 'success');
+                loadSentMessages();
+            } else {
+                showTeacherModal('❌', '전송 실패', (res && res.error) || '알 수 없는 오류', 'error');
+            }
+        })
+        .withFailureHandler(() => { btn.disabled = false; btn.textContent = '전송'; showTeacherModal('❌', '오류', 'GAS 연결 실패', 'error'); })
+        .sendTeacherMessage({ studentId, studentName, title, content });
+}
+
+function loadSentMessages() {
+    const list = document.getElementById('sentMessageList');
+    if (!list) return;
+    list.innerHTML = '<div style="text-align:center;padding:30px;color:#9ca3af;font-size:14px;">불러오는 중...</div>';
+    google.script.run
+        .withSuccessHandler(res => {
+            if (!res || !res.success) { list.innerHTML = '<div style="text-align:center;padding:30px;color:#ef4444;font-size:14px;">불러오기 실패</div>'; return; }
+            if (!res.data || !res.data.length) {
+                list.innerHTML = '<div style="text-align:center;padding:30px;color:#9ca3af;"><div style="font-size:28px;margin-bottom:6px;">📤</div><p style="font-size:14px;">발신 메시지가 없습니다.</p></div>';
+                return;
+            }
+            list.innerHTML = res.data.map(m => {
+                const isRead = m.readStatus === '읽음';
+                const readBadge = isRead
+                    ? `<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">읽음</span>`
+                    : `<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">미읽음</span>`;
+                const readTime = isRead ? `<span style="font-size:11px;color:#9ca3af;margin-left:6px;">읽은시간: ${formatMsgDate(m.readTime)}</span>` : '';
+                return `<div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;margin-bottom:10px;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
+                        <div>
+                            <span style="font-weight:700;font-size:14px;color:#1f2937;">${m.title}</span>
+                            <span style="font-size:12px;color:#6366f1;font-weight:600;margin-left:8px;">→ ${m.studentName} (${m.studentId})</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                            ${readBadge}
+                            <button onclick="confirmDeleteSentMsg(${m.rowIndex},'${m.title.replace(/'/g,"\\'")}')}"
+                                style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:13px;padding:2px 4px;" title="삭제">🗑️</button>
+                        </div>
+                    </div>
+                    <div style="font-size:12px;color:#9ca3af;margin-top:4px;">${formatMsgDate(m.timestamp)} ${readTime}</div>
+                    <div style="font-size:13px;color:#374151;margin-top:8px;white-space:pre-wrap;">${m.content}</div>
+                </div>`;
+            }).join('');
+        })
+        .withFailureHandler(() => { list.innerHTML = '<div style="text-align:center;padding:30px;color:#ef4444;font-size:14px;">GAS 연결 실패</div>'; })
+        .getSentTeacherMessages();
+}
+
+function confirmDeleteSentMsg(rowIndex, title) {
+    if (!confirm(`"${title}" 메시지를 삭제하시겠습니까?`)) return;
+    google.script.run
+        .withSuccessHandler(res => {
+            if (res && res.success) { loadSentMessages(); }
+            else { showTeacherModal('❌', '삭제 실패', (res && res.error) || '알 수 없는 오류', 'error'); }
+        })
+        .withFailureHandler(() => showTeacherModal('❌', '오류', 'GAS 연결 실패', 'error'))
+        .deleteTeacherMessage(rowIndex);
 }
 
 // ── 교사 전용 알림 모달 ──────────────────────────────
