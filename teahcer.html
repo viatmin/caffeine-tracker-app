@@ -2600,6 +2600,12 @@ window.addEventListener('DOMContentLoaded',()=>{
     // 화면 비율 복원
     try{const z=localStorage.getItem('dashZoom');if(z){const sl=document.getElementById('zoomSlider');if(sl)sl.value=z;applyZoom(z);}}catch(e){}
     loadDataFromSheet();
+    // 학생 답장 알림 체크 (로드 후 3초, 이후 2분마다)
+    setTimeout(checkStudentReplies, 3000);
+    setInterval(checkStudentReplies, 120000);
+    // 새 문의 알림 체크 (로드 후 5초, 이후 2분마다)
+    setTimeout(checkUnreadInquiries, 5000);
+    setInterval(checkUnreadInquiries, 120000);
 });
 
 // ============================================
@@ -2837,20 +2843,33 @@ function loadSentMessages() {
                     ? `<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">읽음</span>`
                     : `<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">미읽음</span>`;
                 const readTime = isRead ? `<span style="font-size:11px;color:#9ca3af;margin-left:6px;">읽은시간: ${formatMsgDate(m.readTime)}</span>` : '';
-                return `<div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;margin-bottom:10px;">
+                const hasNewReply = m.studentReply && m.studentReplyRead === '미확인';
+                const replyBadge = hasNewReply
+                    ? `<span style="background:#ef4444;color:white;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700;">답장 NEW</span>`
+                    : '';
+                const replySection = m.studentReply
+                    ? `<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;margin-top:10px;">
+                           <div style="font-size:11px;color:#3b82f6;font-weight:700;margin-bottom:4px;">💬 학생 답장</div>
+                           <div style="font-size:13px;color:#1e40af;white-space:pre-wrap;">${m.studentReply}</div>
+                           <div style="font-size:10px;color:#93c5fd;margin-top:4px;">${formatMsgDate(m.studentReplyTime)}</div>
+                       </div>`
+                    : '';
+                return `<div style="border:1px solid ${hasNewReply ? '#fca5a5' : '#e5e7eb'};border-radius:10px;padding:14px 16px;margin-bottom:10px;${hasNewReply ? 'background:#fff5f5;' : ''}">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
                         <div>
                             <span style="font-weight:700;font-size:14px;color:#1f2937;">${m.title}</span>
                             <span style="font-size:12px;color:#6366f1;font-weight:600;margin-left:8px;">→ ${m.studentName} (${m.studentId})</span>
                         </div>
                         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                            ${replyBadge}
                             ${readBadge}
-                            <button onclick="confirmDeleteSentMsg(${m.rowIndex},'${m.title.replace(/'/g,"\\'")}')}"
+                            <button onclick="confirmDeleteSentMsg(${m.rowIndex},'${m.title.replace(/'/g,"\\'")}')"
                                 style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:13px;padding:2px 4px;" title="삭제">🗑️</button>
                         </div>
                     </div>
                     <div style="font-size:12px;color:#9ca3af;margin-top:4px;">${formatMsgDate(m.timestamp)} ${readTime}</div>
                     <div style="font-size:13px;color:#374151;margin-top:8px;white-space:pre-wrap;">${m.content}</div>
+                    ${replySection}
                 </div>`;
             }).join('');
         })
@@ -2867,6 +2886,124 @@ function confirmDeleteSentMsg(rowIndex, title) {
         })
         .withFailureHandler(() => showTeacherModal('❌', '오류', 'GAS 연결 실패', 'error'))
         .deleteTeacherMessage(rowIndex);
+}
+
+// ── 학생 문의 알림 팝업 ──────────────────────────────
+function checkUnreadInquiries() {
+    google.script.run
+        .withSuccessHandler(res => {
+            if (!res || !res.success || !res.data || !res.data.length) return;
+            showInquiryPopup(res.data);
+        })
+        .getUnreadInquiries();
+}
+
+function showInquiryPopup(inquiries) {
+    if (document.getElementById('inquiryPopup')) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'inquiryPopup';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+
+    const itemsHtml = inquiries.map((q, idx) => `
+        <div style="border:1px solid #fde68a;border-radius:12px;padding:14px;margin-bottom:10px;background:#fffbeb;">
+            <div style="font-size:12px;color:#d97706;font-weight:700;margin-bottom:2px;">${q.name} (${q.studentId})</div>
+            <div style="font-size:11px;color:#9ca3af;margin-bottom:6px;">${formatTimestamp(q.timestamp)}</div>
+            <div style="font-size:14px;color:#92400e;font-weight:600;margin-bottom:4px;">${q.title}</div>
+            <div style="font-size:13px;color:#374151;white-space:pre-wrap;line-height:1.6;margin-bottom:10px;">${q.content}</div>
+            <button data-idx="${idx}" class="inquiry-popup-reply-btn" style="width:100%;padding:9px;background:#f59e0b;color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">✏️ 바로 답장하기</button>
+        </div>`).join('');
+
+    const bottomBtns =
+        `<button id="inquiryPopupClose" style="flex:1;padding:14px;background:#f3f4f6;color:#374151;border:none;border-radius:14px;font-size:14px;font-weight:600;cursor:pointer;">확인했습니다</button>
+         <button id="inquiryPopupGoBtn" style="flex:1;padding:14px;background:#f59e0b;color:white;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;">문의 탭으로 이동</button>`;
+
+    overlay.innerHTML = `
+        <div style="background:white;border-radius:24px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.25);">
+            <div style="background:linear-gradient(135deg,#f59e0b,#d97706);padding:20px 24px;">
+                <div style="font-size:24px;margin-bottom:4px;">📩</div>
+                <div style="font-weight:700;font-size:17px;color:white;">새 문의가 도착했어요!</div>
+                <div style="font-size:12px;color:rgba(255,255,255,0.85);margin-top:2px;">미확인 문의 ${inquiries.length}건</div>
+            </div>
+            <div style="padding:20px;max-height:55vh;overflow-y:auto;">${itemsHtml}</div>
+            <div style="padding:0 20px 20px;display:flex;gap:8px;">${bottomBtns}</div>
+        </div>`;
+    document.body.appendChild(overlay);
+
+    const close = () => {
+        inquiries.forEach(q => google.script.run.markInquiryNotified(q.rowIndex));
+        overlay.remove();
+    };
+
+    const openReply = (q) => {
+        close();
+        // 문의 탭 활성화 후 답장 모달 오픈
+        const tabBtn = document.querySelector('.tab-button[onclick*="inquiries"]');
+        if (tabBtn) tabBtn.click();
+        setTimeout(() => openReplyModal(q.rowIndex, q.title, q.content), 400);
+    };
+
+    document.getElementById('inquiryPopupClose').onclick = close;
+    document.getElementById('inquiryPopupGoBtn').onclick = () => {
+        if (inquiries.length === 1) {
+            openReply(inquiries[0]);
+        } else {
+            close();
+            const tabBtn = document.querySelector('.tab-button[onclick*="inquiries"]');
+            if (tabBtn) tabBtn.click();
+        }
+    };
+
+    // 카드별 답장 버튼
+    overlay.querySelectorAll('.inquiry-popup-reply-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const idx = parseInt(btn.getAttribute('data-idx'));
+            openReply(inquiries[idx]);
+        });
+    });
+}
+
+// ── 학생 답장 알림 팝업 ──────────────────────────────
+function checkStudentReplies() {
+    google.script.run
+        .withSuccessHandler(res => {
+            if (!res || !res.success || !res.data || !res.data.length) return;
+            showStudentReplyPopup(res.data);
+        })
+        .getUnreadStudentReplies();
+}
+
+function showStudentReplyPopup(replies) {
+    if (document.getElementById('studentReplyPopup')) return;
+    const overlay = document.createElement('div');
+    overlay.id = 'studentReplyPopup';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+
+    const repliesHtml = replies.map(r => `
+        <div style="border:1px solid #bfdbfe;border-radius:12px;padding:14px;margin-bottom:10px;background:#eff6ff;">
+            <div style="font-size:12px;color:#3b82f6;font-weight:700;margin-bottom:2px;">${r.studentName} (${r.studentId})</div>
+            <div style="font-size:11px;color:#9ca3af;margin-bottom:6px;">"${r.title}" 에 대한 답장 · ${formatMsgDate(r.studentReplyTime)}</div>
+            <div style="font-size:14px;color:#1e40af;white-space:pre-wrap;line-height:1.6;">${r.studentReply}</div>
+        </div>`).join('');
+
+    overlay.innerHTML = `
+        <div style="background:white;border-radius:24px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.25);">
+            <div style="background:linear-gradient(135deg,#3b82f6,#2563eb);padding:20px 24px;">
+                <div style="font-size:24px;margin-bottom:4px;">💬</div>
+                <div style="font-weight:700;font-size:17px;color:white;">학생이 답장을 보냈어요!</div>
+                <div style="font-size:12px;color:rgba(255,255,255,0.8);margin-top:2px;">새 답장 ${replies.length}건</div>
+            </div>
+            <div style="padding:20px;max-height:55vh;overflow-y:auto;">${repliesHtml}</div>
+            <div style="padding:0 20px 20px;">
+                <button id="studentReplyPopupClose" style="width:100%;padding:14px;background:#3b82f6;color:white;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;">확인했습니다</button>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+
+    document.getElementById('studentReplyPopupClose').onclick = () => {
+        replies.forEach(r => google.script.run.markStudentReplyRead(r.rowIndex));
+        overlay.remove();
+        loadSentMessages();
+    };
 }
 
 // ── 교사 전용 알림 모달 ──────────────────────────────
