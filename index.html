@@ -1078,8 +1078,8 @@
       const mainApp = document.getElementById('mainApp');
       const userTitle = document.getElementById('userTitle');
 
-      if(loginPage) loginPage.classList.add('hidden');
-      if(mainApp) mainApp.classList.remove('hidden');
+      if(loginPage) { loginPage.style.display = ''; loginPage.classList.add('hidden'); }
+      if(mainApp) { mainApp.style.display = ''; mainApp.classList.remove('hidden'); }
       if(userTitle) userTitle.textContent = `${res.name} 님`;
       if (typeof hideTutFab === 'function') hideTutFab();
 
@@ -1483,9 +1483,9 @@
               console.log('✅ 수면 저장 성공:', response);
 
               if(response && response.updated) {
-                showSaveCompleteModal('✅ 기존 수면 기록이\n새로운 데이터로 업데이트되었습니다.');
+                showSleepCompleteModal(hours, true);
               } else {
-                showSaveCompleteModal('✅ 수면 기록이 저장되었습니다.');
+                showSleepCompleteModal(hours, false);
               }
 
               if(btn) btn.innerText = "수면 기록 완료";
@@ -2084,6 +2084,65 @@
     function confirmWeight() {
       if (window._weightConfirmCallback) window._weightConfirmCallback();
       closeWeightConfirmModal();
+    }
+
+    function showSleepCompleteModal(hours, isUpdated) {
+      const h = parseFloat(hours);
+      let statusEmoji, statusLabel, headerColor, statusBody;
+      const tag = 'background:white;border-radius:20px;padding:4px 11px;font-size:12px;color:#374151;box-shadow:0 1px 3px rgba(0,0,0,0.08);white-space:nowrap;';
+      const box = (bg, border, content) => `<div style="background:${bg};border:1.5px solid ${border};border-radius:16px;padding:11px 14px;margin-bottom:10px;">${content}</div>`;
+      const label = (color, text) => `<p style="font-size:11px;font-weight:700;color:${color};margin-bottom:8px;">${text}</p>`;
+      const tags = (...items) => `<div style="display:flex;gap:6px;flex-wrap:wrap;">${items.map(t=>`<span style="${tag}">${t}</span>`).join('')}</div>`;
+      const info = (bg, border, color, text) => `<div style="background:${bg};border:1.5px solid ${border};border-radius:16px;padding:11px 14px;margin-bottom:10px;text-align:center;"><p style="font-size:13px;color:${color};line-height:1.65;word-break:keep-all;">${text}</p></div>`;
+
+      if (h < 6) {
+        statusEmoji = '😵'; statusLabel = '수면 부족'; headerColor = '#ef4444';
+        statusBody =
+          `<p style="text-align:center;font-size:15px;font-weight:800;color:#111827;margin-bottom:10px;">수면이 많이 부족해요!</p>` +
+          box('#fef2f2','#fecaca', label('#ef4444','⚠️ 수면 부족 시 나타날 수 있는 증상') + tags('😔 우울감','😤 예민함','😩 피로감')) +
+          `<p style="text-align:center;font-size:13px;color:#6b7280;">💡 오늘은 일찍 잠자리에 들어보세요.</p>`;
+      } else if (h < 8) {
+        statusEmoji = '😪'; statusLabel = '약간 부족'; headerColor = '#f97316';
+        statusBody =
+          `<p style="text-align:center;font-size:15px;font-weight:800;color:#111827;margin-bottom:10px;">조금 더 수면이 필요해요!</p>` +
+          box('#fff7ed','#fed7aa', label('#f97316','💤 청소년 권장 수면: 8시간 이상') + tags('😤 예민해질 수 있어요','😩 피로가 쌓여요')) +
+          `<p style="text-align:center;font-size:13px;color:#6b7280;">💡 조금 더 일찍 잠자리에 들어보세요.</p>`;
+      } else if (h <= 10) {
+        statusEmoji = '😊'; statusLabel = '적정 수면'; headerColor = '#10b981';
+        statusBody =
+          `<p style="text-align:center;font-size:15px;font-weight:800;color:#111827;margin-bottom:10px;">딱 적당한 수면이에요! 👏</p>` +
+          info('#ecfdf5','#a7f3d0','#065f46','집중력·기억력 향상에 도움이 되고<br>건강한 하루를 만들어줘요. 🌟') +
+          `<p style="text-align:center;font-size:13px;color:#6b7280;">💡 오늘도 건강하게 지내세요!</p>`;
+      } else {
+        statusEmoji = '😴'; statusLabel = '수면 과다'; headerColor = '#8b5cf6';
+        statusBody =
+          `<p style="text-align:center;font-size:15px;font-weight:800;color:#111827;margin-bottom:10px;">수면 시간이 좀 길었네요!</p>` +
+          info('#f5f3ff','#ddd6fe','#4c1d95','너무 긴 수면은 피로감이 남고<br>생체 리듬을 흐트러뜨릴 수 있어요.') +
+          `<p style="text-align:center;font-size:13px;color:#6b7280;">💡 규칙적인 수면 패턴을 유지해보세요.</p>`;
+      }
+      const savedText = isUpdated ? '기존 기록이 업데이트되었습니다' : '수면 기록이 저장되었습니다';
+      const overlay = document.createElement('div');
+      overlay.className = 'fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4 backdrop-blur-sm';
+      overlay.innerHTML = `
+        <div class="bg-white rounded-[2rem] w-full max-w-sm overflow-hidden shadow-2xl transform scale-95 animate-scale-in">
+          <div class="text-center text-white" style="background:${headerColor};padding:18px 24px 14px;">
+            <div style="font-size:42px;margin-bottom:4px;">${statusEmoji}</div>
+            <div style="font-size:19px;font-weight:900;margin-bottom:1px;">${statusLabel}</div>
+            <div style="font-size:32px;font-weight:900;margin-bottom:1px;">${h}시간</div>
+            <div style="font-size:12px;opacity:0.85;">총 수면 시간</div>
+          </div>
+          <div style="padding:14px 18px 18px;background:#f9fafb;">
+            ${statusBody}
+            <p style="text-align:center;font-size:11px;color:#9ca3af;margin:10px 0 12px;">✅ ${savedText}</p>
+            <button onclick="this.closest('.fixed').remove()"
+              style="width:100%;padding:12px;background:white;border:2px solid #e5e7eb;border-radius:18px;font-size:15px;font-weight:700;color:#374151;cursor:pointer;">
+              확인했습니다
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 5000);
     }
 
     function showSaveCompleteModal(message) {
@@ -2924,8 +2983,8 @@
         const index = sleepLogs.findIndex(l => l.id === editingId);
         if(index !== -1) sleepLogs[index] = { ...sleepLogs[index], date, start, end, hours: parseFloat(hours), condition, memo };
         google.script.run
-          .withSuccessHandler(() => { showSaveCompleteModal('수면 기록이 수정되었습니다.'); closeEditModal(); loadSleepLogs(); refreshData(); })
-          .withFailureHandler(err => { showSaveCompleteModal('기록이 수정되었습니다.\n(로컬에만 저장됨)'); closeEditModal(); loadSleepLogs(); refreshData(); })
+          .withSuccessHandler(() => { closeEditModal(); loadSleepLogs(); refreshData(); showSleepCompleteModal(hours, true); })
+          .withFailureHandler(err => { closeEditModal(); loadSleepLogs(); refreshData(); showSleepCompleteModal(hours, true); })
           .updateSleepData({ id: editingId, studentId: user.studentId, name: user.name, date, sleepTime: start, wakeTime: end, hours: parseFloat(hours), condition, memo });
       }
     }
@@ -5365,7 +5424,9 @@ function dNavTo(tab) {
 function startTutorial() {
   tutCurStep = 0;
   // 실제 앱 숨기기, 데모 앱 보이기
-  document.getElementById('loginPage').style.display = 'none';
+  const _lp = document.getElementById('loginPage');
+  _lp.style.display = '';
+  _lp.classList.add('hidden');
   document.getElementById('demoWrap').style.display  = 'block';   // ← CSS display:none 덮어씀
   // 데모 로그인 화면으로 리셋
   document.getElementById('sc-login').style.display = 'block';
@@ -5549,8 +5610,11 @@ function tutSkip() {
 function tutEnd() {
   document.getElementById('tutorialOverlay').style.display = 'none';
   // 데모 숨기고 실제 로그인 화면 복원
-  document.getElementById('demoWrap').style.display  = 'none';
-  document.getElementById('loginPage').style.display = 'block';
+  document.getElementById('demoWrap').style.display = 'none';
+  const loginPage = document.getElementById('loginPage');
+  // classList 기반으로 복원 (인라인 스타일 충돌 방지)
+  loginPage.style.display = '';
+  loginPage.classList.remove('hidden');
   // 로그인 폼 안 튜토리얼 버튼 복원
   const loginBtn = document.getElementById('tutLoginBtn');
   if (loginBtn) loginBtn.style.display = 'inline-flex';
