@@ -55,6 +55,10 @@
     .quick-btn:active { transform: scale(0.95); }
     .condition-btn { transition: all 0.2s; border: 2px solid transparent; }
     .condition-btn.selected { border-color: #6366f1; background-color: #f5f3ff; transform: scale(1.05); }
+    .drum-tab-active { background:white; border-bottom:2px solid #6366f1 !important; color:#4f46e5; font-weight:700; }
+    .drum-tab-inactive { background:#f9fafb; border-bottom:2px solid #e5e7eb !important; color:#9ca3af; font-weight:600; }
+    .time-input { -moz-appearance:textfield; }
+    .time-input::-webkit-outer-spin-button, .time-input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
     
     #refreshBtn {
       position: relative;
@@ -577,16 +581,34 @@
                 class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-400">
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-2">취침 시간</label>
-                <input type="time" id="sleepStart" 
-                  class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-400">
+            <!-- 숨겨진 실제 time 입력 (기존 JS 호환) -->
+            <input type="hidden" id="sleepStart">
+            <input type="hidden" id="sleepEnd">
+
+            <!-- 시간 피커 -->
+            <div class="rounded-2xl border-2 border-gray-200 overflow-hidden">
+              <div class="flex">
+                <button id="tabBed" onclick="switchTimeTab('bed')" class="drum-tab-active flex-1 py-3 text-sm border-b-2 transition-all">
+                  🛏️ 취침&nbsp;<span id="labelBedtime" class="font-normal text-xs">--:--</span>
+                </button>
+                <button id="tabWake" onclick="switchTimeTab('wake')" class="drum-tab-inactive flex-1 py-3 text-sm border-b-2 transition-all">
+                  ⏰ 기상&nbsp;<span id="labelWaketime" class="font-normal text-xs">--:--</span>
+                </button>
               </div>
-              <div>
-                <label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-2">기상 시간</label>
-                <input type="time" id="sleepEnd" 
-                  class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-400">
+              <div class="flex items-center justify-center gap-3 py-8 bg-gray-50">
+                <button id="timeAmPm" onclick="toggleTimeAmPm()"
+                  class="px-4 py-5 rounded-2xl bg-white border-2 border-indigo-200 text-indigo-700 font-bold text-xl min-w-[72px] shadow-sm active:bg-indigo-50 transition-colors">오후</button>
+                <div class="flex items-center gap-1 bg-white border-2 border-indigo-200 rounded-2xl px-3 py-3 shadow-sm">
+                  <input id="timeH" type="number" min="1" max="12" inputmode="numeric"
+                    oninput="onTimeInput()" onblur="onTimeBlur('timeH',1,12)"
+                    class="time-input w-16 text-center text-4xl font-bold outline-none bg-transparent text-gray-800"
+                    placeholder="11">
+                  <span class="text-4xl font-bold text-gray-300 px-1">:</span>
+                  <input id="timeM" type="number" min="0" max="59" inputmode="numeric"
+                    oninput="onTimeInput()" onblur="onTimeBlur('timeM',0,59)"
+                    class="time-input w-16 text-center text-4xl font-bold outline-none bg-transparent text-gray-800"
+                    placeholder="00">
+                </div>
               </div>
             </div>
 
@@ -1290,6 +1312,7 @@
         const lastSleepEnd = localStorage.getItem('lastSleepEnd_' + user.studentId);
         if (lastSleepStart) document.getElementById('sleepStart').value = lastSleepStart;
         if (lastSleepEnd) document.getElementById('sleepEnd').value = lastSleepEnd;
+        initTimePicker();
       }
       if(id === 'settings') {
         setTimeout(loadMyInquiries, 300);
@@ -1518,6 +1541,124 @@
         })
         .testConnection();
     }
+
+    // ── 드럼롤 시간 피커 (공용 헬퍼) ────────────────────────
+    function _drumTo24h(ampm, h12, m) {
+      let h = h12;
+      if (ampm === 0) { if (h === 12) h = 0; }
+      else            { if (h !== 12) h += 12; }
+      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    }
+    function _24hToDrum(t) {
+      if (!t || !t.includes(':')) return {ampm:1,h:11,m:0};
+      const [hs,ms] = t.split(':');
+      let h24=parseInt(hs), m=parseInt(ms), ampm, h12;
+      if      (h24===0)  { ampm=0; h12=12; }
+      else if (h24<12)   { ampm=0; h12=h24; }
+      else if (h24===12) { ampm=1; h12=12; }
+      else               { ampm=1; h12=h24-12; }
+      return {ampm, h:h12, m};
+    }
+    function _drumFmtLabel(t) {
+      if (!t||!t.includes(':')) return '--:--';
+      const [hs,ms]=t.split(':'); const h24=parseInt(hs);
+      return `${h24<12?'오전':'오후'} ${h24%12||12}:${ms}`;
+    }
+
+    // ── 메인 시간 입력 피커 ──────────────────────────────────
+    let _timeTab='bed', _timeState={bed:{ampm:1,h:11,m:0},wake:{ampm:0,h:6,m:30}};
+
+    function initTimePicker() {
+      const sv=document.getElementById('sleepStart').value;
+      const ev=document.getElementById('sleepEnd').value;
+      if(sv) _timeState.bed =_24hToDrum(sv);
+      if(ev) _timeState.wake=_24hToDrum(ev);
+      if(!sv) document.getElementById('sleepStart').value=_drumTo24h(_timeState.bed.ampm,_timeState.bed.h,_timeState.bed.m);
+      if(!ev) document.getElementById('sleepEnd').value  =_drumTo24h(_timeState.wake.ampm,_timeState.wake.h,_timeState.wake.m);
+      _timeTab='bed'; _applyTimeState(_timeState.bed); _updateTimeLabels();
+    }
+    function _applyTimeState(s) {
+      document.getElementById('timeAmPm').textContent=s.ampm===0?'오전':'오후';
+      document.getElementById('timeH').value=s.h;
+      document.getElementById('timeM').value=String(s.m).padStart(2,'0');
+    }
+    function _updateTimeLabels() {
+      const b=document.getElementById('labelBedtime'),w=document.getElementById('labelWaketime');
+      if(b) b.textContent=_drumFmtLabel(document.getElementById('sleepStart').value);
+      if(w) w.textContent=_drumFmtLabel(document.getElementById('sleepEnd').value);
+    }
+    function _saveTimeState() {
+      const ampm=document.getElementById('timeAmPm').textContent==='오전'?0:1;
+      const h=Math.max(1,Math.min(12,parseInt(document.getElementById('timeH').value)||1));
+      const m=Math.max(0,Math.min(59,parseInt(document.getElementById('timeM').value)||0));
+      _timeState[_timeTab]={ampm,h,m};
+      document.getElementById(_timeTab==='bed'?'sleepStart':'sleepEnd').value=_drumTo24h(ampm,h,m);
+      _updateTimeLabels();
+    }
+    function switchTimeTab(tab) {
+      _saveTimeState(); _timeTab=tab; _applyTimeState(_timeState[tab]);
+      const b=document.getElementById('tabBed'),w=document.getElementById('tabWake');
+      if(tab==='bed'){b.className='drum-tab-active flex-1 py-3 text-sm border-b-2 transition-all';w.className='drum-tab-inactive flex-1 py-3 text-sm border-b-2 transition-all';}
+      else           {w.className='drum-tab-active flex-1 py-3 text-sm border-b-2 transition-all';b.className='drum-tab-inactive flex-1 py-3 text-sm border-b-2 transition-all';}
+      _updateTimeLabels();
+    }
+    function toggleTimeAmPm() {
+      const b=document.getElementById('timeAmPm'); b.textContent=b.textContent==='오전'?'오후':'오전'; _saveTimeState();
+    }
+    function onTimeInput() { _saveTimeState(); }
+    function onTimeBlur(id,min,max) {
+      const el=document.getElementById(id); let v=parseInt(el.value);
+      if(isNaN(v)||v<min) v=min; if(v>max) v=max;
+      el.value=(id==='timeM')?String(v).padStart(2,'0'):v;
+      _saveTimeState();
+    }
+
+    // ── 수면 편집 시간 피커 ──────────────────────────────────
+    let _eTimeTab='bed', _eTimeState={bed:{ampm:1,h:11,m:0},wake:{ampm:0,h:6,m:30}};
+
+    function initEditTimePicker(sv,ev) {
+      _eTimeState.bed =_24hToDrum(sv||'23:00');
+      _eTimeState.wake=_24hToDrum(ev||'06:30');
+      document.getElementById('editSleepStart').value=sv||'23:00';
+      document.getElementById('editSleepEnd').value  =ev||'06:30';
+      _eTimeTab='bed'; _applyETimeState(_eTimeState.bed); _updateETimeLabels();
+    }
+    function _applyETimeState(s) {
+      document.getElementById('eTimeAmPm').textContent=s.ampm===0?'오전':'오후';
+      document.getElementById('eTimeH').value=s.h;
+      document.getElementById('eTimeM').value=String(s.m).padStart(2,'0');
+    }
+    function _updateETimeLabels() {
+      const b=document.getElementById('eLabelBed'),w=document.getElementById('eLabelWake');
+      if(b) b.textContent=_drumFmtLabel(document.getElementById('editSleepStart').value);
+      if(w) w.textContent=_drumFmtLabel(document.getElementById('editSleepEnd').value);
+    }
+    function _saveETimeState() {
+      const ampm=document.getElementById('eTimeAmPm').textContent==='오전'?0:1;
+      const h=Math.max(1,Math.min(12,parseInt(document.getElementById('eTimeH').value)||1));
+      const m=Math.max(0,Math.min(59,parseInt(document.getElementById('eTimeM').value)||0));
+      _eTimeState[_eTimeTab]={ampm,h,m};
+      document.getElementById(_eTimeTab==='bed'?'editSleepStart':'editSleepEnd').value=_drumTo24h(ampm,h,m);
+      _updateETimeLabels();
+    }
+    function switchETimeTab(tab) {
+      _saveETimeState(); _eTimeTab=tab; _applyETimeState(_eTimeState[tab]);
+      const b=document.getElementById('eTabBed'),w=document.getElementById('eTabWake');
+      if(tab==='bed'){b.className='drum-tab-active flex-1 py-3 text-sm border-b-2 transition-all';w.className='drum-tab-inactive flex-1 py-3 text-sm border-b-2 transition-all';}
+      else           {w.className='drum-tab-active flex-1 py-3 text-sm border-b-2 transition-all';b.className='drum-tab-inactive flex-1 py-3 text-sm border-b-2 transition-all';}
+      _updateETimeLabels();
+    }
+    function toggleETimeAmPm() {
+      const b=document.getElementById('eTimeAmPm'); b.textContent=b.textContent==='오전'?'오후':'오전'; _saveETimeState();
+    }
+    function onETimeInput() { _saveETimeState(); }
+    function onETimeBlur(id,min,max) {
+      const el=document.getElementById(id); let v=parseInt(el.value);
+      if(isNaN(v)||v<min) v=min; if(v>max) v=max;
+      el.value=(id==='eTimeM')?String(v).padStart(2,'0'):v;
+      _saveETimeState();
+    }
+    // ────────────────────────────────────────────────────────
 
     // 수면 기록 저장
     function submitSleep() {
@@ -2886,11 +3027,32 @@
         body.innerHTML = `
           <div><label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-2">날짜</label>
           <input type="date" id="editDate" value="${log.date}" class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-400"></div>
-          <div class="grid grid-cols-2 gap-3">
-            <div><label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-2">취침</label>
-            <input type="time" id="editSleepStart" value="${log.start}" class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-400"></div>
-            <div><label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-2">기상</label>
-            <input type="time" id="editSleepEnd" value="${log.end}" class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-400"></div>
+          <input type="hidden" id="editSleepStart">
+          <input type="hidden" id="editSleepEnd">
+          <div class="rounded-2xl border-2 border-gray-200 overflow-hidden">
+            <div class="flex">
+              <button id="eTabBed" onclick="switchETimeTab('bed')" class="drum-tab-active flex-1 py-3 text-sm border-b-2 transition-all">
+                🛏️ 취침&nbsp;<span id="eLabelBed" class="font-normal text-xs">--:--</span>
+              </button>
+              <button id="eTabWake" onclick="switchETimeTab('wake')" class="drum-tab-inactive flex-1 py-3 text-sm border-b-2 transition-all">
+                ⏰ 기상&nbsp;<span id="eLabelWake" class="font-normal text-xs">--:--</span>
+              </button>
+            </div>
+            <div class="flex items-center justify-center gap-3 py-8 bg-gray-50">
+              <button id="eTimeAmPm" onclick="toggleETimeAmPm()"
+                class="px-4 py-5 rounded-2xl bg-white border-2 border-indigo-200 text-indigo-700 font-bold text-xl min-w-[72px] shadow-sm active:bg-indigo-50 transition-colors">오후</button>
+              <div class="flex items-center gap-1 bg-white border-2 border-indigo-200 rounded-2xl px-3 py-3 shadow-sm">
+                <input id="eTimeH" type="number" min="1" max="12" inputmode="numeric"
+                  oninput="onETimeInput()" onblur="onETimeBlur('eTimeH',1,12)"
+                  class="time-input w-16 text-center text-4xl font-bold outline-none bg-transparent text-gray-800"
+                  placeholder="11">
+                <span class="text-4xl font-bold text-gray-300 px-1">:</span>
+                <input id="eTimeM" type="number" min="0" max="59" inputmode="numeric"
+                  oninput="onETimeInput()" onblur="onETimeBlur('eTimeM',0,59)"
+                  class="time-input w-16 text-center text-4xl font-bold outline-none bg-transparent text-gray-800"
+                  placeholder="00">
+              </div>
+            </div>
           </div>
           <div><label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-2">상태</label>
           <div class="grid grid-cols-5 gap-2" id="editConditionContainer">
@@ -2904,6 +3066,7 @@
           <textarea id="editMemo" class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-400 resize-none" rows="3">${log.memo || ''}</textarea></div>
         `;
         window.editCondition = log.condition;
+        setTimeout(() => initEditTimePicker(log.start, log.end), 50);
       }
 
       // 카페인 수정 모달: 기존 이유 값 체크박스에 복원
