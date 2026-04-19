@@ -37,18 +37,33 @@
       throw new Error('[gas-bridge] window.GAS_API_URL 이 설정되지 않았습니다.');
     }
 
-    console.log('[gas-bridge] 호출:', action, params);
+    const paramsJson = JSON.stringify(params);
+    console.log('[gas-bridge] 호출:', action, '| params 길이:', paramsJson.length);
 
-    // ── GET 방식으로 전송 (CORS 문제 우회) ─────────────────
-    // GAS는 GET 요청에 대해 CORS 헤더를 정상적으로 반환함
-    const url = new URL(baseUrl);
-    url.searchParams.set('action', action);
-    url.searchParams.set('params', JSON.stringify(params));
+    // ── 전송 방식 자동 선택 ─────────────────────────────────
+    // params가 크면(1500자 초과) POST + text/plain 사용
+    // (text/plain은 CORS 단순 요청 → preflight 없음)
+    // params가 작으면 기존 GET 방식 유지
+    const USE_POST = paramsJson.length > 1500;
+    let res;
 
-    const res = await fetch(url.toString(), {
-      method: 'GET',
-      redirect: 'follow',
-    });
+    if (USE_POST) {
+      console.log('[gas-bridge] POST 방식 사용 (대용량 데이터)');
+      res = await fetch(baseUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' }, // preflight 없이 CORS 통과
+        body: JSON.stringify({ action, params }),
+        redirect: 'follow',
+      });
+    } else {
+      const url = new URL(baseUrl);
+      url.searchParams.set('action', action);
+      url.searchParams.set('params', paramsJson);
+      res = await fetch(url.toString(), {
+        method: 'GET',
+        redirect: 'follow',
+      });
+    }
 
     if (!res.ok) {
       throw new Error(`HTTP 오류: ${res.status}`);
