@@ -168,7 +168,10 @@
         @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
         @keyframes fadeInOverlay{from{opacity:0}to{opacity:1}}
         @keyframes modalPop{from{opacity:0;transform:scale(0.88) translateY(-10px)}to{opacity:1;transform:scale(1) translateY(0)}}
-        .modal-actions{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+        .modal-actions{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;}
+        .ai-period-btn{font-size:11px;padding:3px 9px;border:1.5px solid #d1d5db;border-radius:6px;background:white;color:#6b7280;cursor:pointer;font-weight:600;transition:all .15s;}
+        .ai-period-btn:hover{border-color:#6366f1;color:#6366f1;}
+        .ai-period-btn.active-period{border-color:#6366f1;background:#eef2ff;color:#4f46e5;}
         .section-title{font-size:17px;font-weight:700;color:#1f2937;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
         .dual-chart-container{position:relative;height:290px;}
         .data-table{width:100%;border-collapse:separate;border-spacing:0;margin-top:12px;}
@@ -1041,7 +1044,20 @@
                 <span class="date-range-badge" id="modalDateRangeLabel">-</span>
             </div>
             <div class="modal-actions">
-                <button class="btn btn-green" onclick="requestAIAnalysis()" id="aiBtn">🤖 AI 건강분석</button>
+                <!-- AI 분석 버튼 + 기간 선택 -->
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <button class="btn btn-green" onclick="requestAIAnalysis()" id="aiBtn">🤖 AI 건강분석</button>
+                    <div style="display:flex;gap:4px;align-items:center;background:#f3f4f6;border-radius:8px;padding:3px 6px;">
+                        <span style="font-size:11px;color:#6b7280;font-weight:600;white-space:nowrap;">분석기간:</span>
+                        <button id="aiPeriodBtn7"  onclick="setAIPeriod(7)"  class="ai-period-btn active-period">7일</button>
+                        <button id="aiPeriodBtn14" onclick="setAIPeriod(14)" class="ai-period-btn">14일</button>
+                        <button id="aiPeriodBtn30" onclick="setAIPeriod(30)" class="ai-period-btn">1개월</button>
+                        <span style="font-size:11px;color:#9ca3af;padding:0 2px;">|</span>
+                        <input type="date" id="aiStartDate" style="font-size:11px;padding:2px 6px;border:1px solid #d1d5db;border-radius:5px;color:#374151;cursor:pointer;" onchange="setAIPeriodCustom()" title="직접 시작일 선택">
+                        <span style="font-size:11px;color:#9ca3af;">~</span>
+                        <span id="aiEndDateLabel" style="font-size:11px;color:#374151;font-weight:600;white-space:nowrap;"></span>
+                    </div>
+                </div>
                 <button class="btn btn-blue" onclick="exportPDF()">📄 PDF 저장</button>
                 <button class="btn" style="background:#f5f3ff;color:#6d28d9;border:none;" onclick="openManualAwardModal('single')">🏅 뱃지 수여</button>
                 <button class="btn" style="background:#ecfdf5;color:#065f46;border:none;" onclick="openMsgSendModal()">📨 메시지 보내기</button>
@@ -2189,6 +2205,47 @@ function renderStudentGrid(students){
     });
 }
 
+// ── AI 분석 기간 선택 ────────────────────────────────────────
+// startDate~endDate 사이의 모든 날짜 배열 반환
+function getDatesBetween(startDate, endDate){
+    const arr=[], s=new Date(startDate+'T00:00:00'), e=new Date(endDate+'T00:00:00');
+    for(let d=new Date(s); d<=e; d.setDate(d.getDate()+1)){
+        arr.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
+    }
+    return arr;
+}
+
+let _aiPeriodDays = 7; // 현재 선택된 기간 (0=직접입력)
+
+function setAIPeriod(days){
+    _aiPeriodDays = days;
+    const endDate = document.getElementById('modalEndDate').value || today;
+    const start = new Date(endDate+'T00:00:00');
+    start.setDate(start.getDate() - days + 1);
+    const startStr = start.getFullYear()+'-'+String(start.getMonth()+1).padStart(2,'0')+'-'+String(start.getDate()).padStart(2,'0');
+    document.getElementById('aiStartDate').value = startStr;
+    _updateAIPeriodUI(days, endDate);
+}
+
+function setAIPeriodCustom(){
+    _aiPeriodDays = 0;
+    const endDate = document.getElementById('modalEndDate').value || today;
+    _updateAIPeriodUI(0, endDate);
+}
+
+function _updateAIPeriodUI(activeDays, endDate){
+    [7,14,30].forEach(function(d){
+        document.getElementById('aiPeriodBtn'+d).classList.toggle('active-period', d===activeDays);
+    });
+    document.getElementById('aiEndDateLabel').textContent = (endDate||today).substring(5);
+}
+
+function _initAIPeriod(){
+    const endDate = document.getElementById('modalEndDate').value || today;
+    document.getElementById('aiStartDate').max = today;
+    setAIPeriod(7); // 기본 7일
+}
+
 function openStudentModal(id){
     currentStudentId=id;const s=studentsData.find(st=>st.학번===id);if(!s)return;
     document.getElementById('modalStudentName').textContent=s.이름;
@@ -2198,6 +2255,7 @@ function openStudentModal(id){
     document.getElementById('aiBoxBody').classList.remove('open');document.getElementById('aiArrow').classList.remove('open');
     const listDate = document.getElementById('studentDateFilter')?.value || today;
     document.getElementById('modalEndDate').value=listDate;document.getElementById('modalEndDate').max=today;
+    _initAIPeriod();
     refreshModalData();document.getElementById('studentModal').classList.add('active');
 }
 function closeModal(){document.getElementById('studentModal').classList.remove('active');}
@@ -2210,6 +2268,9 @@ function refreshModalData(){
     const rl=`${dates[0].substring(5)} ~ ${dates[dates.length-1].substring(5)}`;
     document.getElementById('modalDateRangeLabel').textContent=`📅 ${rl} (7일)`;
     document.getElementById('chartRangeLabel').textContent=`(${rl})`;
+    // AI 기간 UI의 종료일 라벨 갱신 + 선택된 기간 유지
+    if(_aiPeriodDays>0) setAIPeriod(_aiPeriodDays);
+    else document.getElementById('aiEndDateLabel').textContent=endDate.substring(5);
     document.getElementById('cafTableRangeLabel').textContent=`(${rl})`;
     document.getElementById('sleepTableRangeLabel').textContent=`(${rl})`;
     const s=studentsData.find(st=>st.학번===currentStudentId);if(!s)return;
@@ -2427,7 +2488,11 @@ function toggleAI(){const b=document.getElementById('aiBoxBody'),a=document.getE
 async function requestAIAnalysis(){
     const s=studentsData.find(st=>st.학번===currentStudentId);if(!s)return;
     const endDate=document.getElementById('modalEndDate').value||today;
-    const dates=getLast7Dates(endDate);
+    // 선택된 시작일 사용 (없으면 기본 7일)
+    const startDateEl=document.getElementById('aiStartDate');
+    const startDate=startDateEl&&startDateEl.value?startDateEl.value:getLast7Dates(endDate)[0];
+    const dates=getDatesBetween(startDate, endDate);
+    const periodLabel=startDate===endDate?startDate:`${startDate} ~ ${endDate} (${dates.length}일)`;
     const cafDays=countCafDays(currentStudentId,dates);
     const slpDays=countSleepDays(currentStudentId,dates);
 
@@ -2473,9 +2538,9 @@ async function requestAIAnalysis(){
         name:s.이름,
         weight:info?info.몸무게:60,
         limit:lim,
-        startDate:dates[0],
-        endDate:dates[dates.length-1],
-        period:`${dates[0]} ~ ${dates[dates.length-1]}`,
+        startDate:startDate,
+        endDate:endDate,
+        period:periodLabel,
         caffeineData:{
             avgPerDay:Math.round(avgCaf),
             maxDay:maxCafDay?`${maxCafDay[0]}(${maxCafDay[1]}mg)`:'없음',
