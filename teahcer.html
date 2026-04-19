@@ -589,12 +589,24 @@
             <div class="chart-card"><h3 class="chart-title">평균 7일간 컨디션 분포</h3><div class="chart-container"><canvas id="avgSleepChart"></canvas></div></div>
             <div class="chart-card"><h3 class="chart-title">수면시간 분포</h3><div class="chart-container"><canvas id="sleepDistChart"></canvas></div></div>
             <div class="chart-card" style="grid-column:1/-1;">
-                <h3 class="chart-title">📝 수면 메모 워드클라우드 <span style="font-size:13px;font-weight:400;color:#9ca3af;">Gemini AI 분석</span></h3>
-                <div style="text-align:center;margin-bottom:16px;">
-                    <button onclick="requestSleepWordCloud()" id="wordCloudBtn" class="btn btn-primary" style="background:#8b5cf6;">🔍 Gemini AI로 메모 분석</button>
-                    <span style="font-size:12px;color:#9ca3af;margin-left:12px;">현재 필터된 학생들의 수면 메모를 분석합니다</span>
+                <h3 class="chart-title">📝 수면 메모 주제별 분석 <span style="font-size:13px;font-weight:400;color:#9ca3af;">Gemini AI</span></h3>
+                <!-- 메모 미리보기: 자동 표시 -->
+                <div id="memoPreviewSection" style="margin-bottom:4px;">
+                    <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:10px;">📋 수면 메모 목록 <span style="font-size:11px;font-weight:400;color:#9ca3af;">탭 전환 시 자동 갱신</span></div>
+                    <div id="memoPreviewList"><p style="color:#9ca3af;font-size:13px;text-align:center;padding:20px;">수면 탭을 열면 자동으로 표시됩니다.</p></div>
                 </div>
-                <div id="wordCloudResult"></div>
+                <div style="border-top:2px dashed #e5e7eb;margin:20px 0;"></div>
+                <!-- Gemini AI 주제 분류: 버튼 클릭 -->
+                <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+                        <div>
+                            <span style="font-size:13px;font-weight:600;color:#374151;">🤖 Gemini AI 주제별 분류</span>
+                            <span style="font-size:11px;font-weight:400;color:#9ca3af;margin-left:8px;">비슷한 내용끼리 묶어 수면 방해 원인을 파악합니다</span>
+                        </div>
+                        <button onclick="requestSleepTopicAnalysis()" id="topicAnalysisBtn" class="btn btn-sm" style="background:#8b5cf6;color:white;padding:8px 18px;">🔍 AI 주제 분류</button>
+                    </div>
+                    <div id="topicAnalysisResult"><p style="color:#9ca3af;font-size:13px;">AI 버튼을 누르면 Gemini가 메모를 의미별로 분류합니다.</p></div>
+                </div>
             </div>
         </div>
     </div>
@@ -1725,6 +1737,8 @@ function updateSleepTab(){
         data:{labels:Object.keys(dm2),datasets:[{data:Object.values(dm2),backgroundColor:['#ef4444','#f97316','#10b981','#8b5cf6']}]},
         options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right'}}}
     });
+    // 빠른 워드클라우드 자동 갱신
+    renderQuickWordCloud();
 }
 
 function getStudentFilterDate(){
@@ -2275,78 +2289,106 @@ function refreshModalData(){
 
 function toggleDetailRow(id){const row=document.getElementById(id);if(row)row.style.display=row.style.display==='none'?'table-row':'none';}
 
-function clientWordFreq(memos){
-    const stop=new Set(['이','가','을','를','은','는','에','에서','로','으로','의','과','와','도','만','부터','까지','이다','하다','있다','없다','그','저','나','내','그리고','하지만','그래서','또','더','많이','조금','너무','매우','정말','좀','잘','못','안','수','것','때','후','전','오늘','어제','내일','같다','같아','이','거','데','게','해','됐','됩','했','했어','했음','같은','하는','되는','있는','없는','않는','이런','그런','어떤','아','어','음','으','하여','하고','하면','해서','해도','하니','하지','하면서','그냥','진짜','막','계속','아직','이제','다시','계속','좀더','빨리']);
-    const freq={};
-    memos.forEach(m=>{
-        String(m).replace(/[^\uAC00-\uD7AF a-zA-Z]/g,' ').split(/\s+/).forEach(w=>{
-            if(w.length>=2&&!stop.has(w))freq[w]=(freq[w]||0)+1;
-        });
+// ── 메모 미리보기: updateSleepTab에서 자동 호출 ─────────────
+function renderQuickWordCloud(){
+    const el=document.getElementById('memoPreviewList');if(!el)return;
+    const {filteredSleep,dates}=getSleepTabFilter();
+    const memos=filteredSleep.filter(s=>s.메모&&s.메모.trim()).sort((a,b)=>b.날짜.localeCompare(a.날짜));
+    if(memos.length===0){
+        el.innerHTML='<p style="color:#9ca3af;font-size:13px;text-align:center;padding:20px;">해당 기간에 수면 메모가 없습니다.</p>';
+        document.getElementById('topicAnalysisBtn').disabled=true;
+        return;
+    }
+    document.getElementById('topicAnalysisBtn').disabled=false;
+    // 메모 목록 표시 (최대 30건, 날짜+내용)
+    const shown=memos.slice(0,30);
+    let html=`<div style="font-size:12px;color:#6b7280;margin-bottom:10px;">총 <strong>${memos.length}건</strong> 발견 (최대 30건 표시 · AI 분석에는 전체 사용)</div>`;
+    html+='<div style="display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto;padding-right:4px;">';
+    shown.forEach(s=>{
+        html+=`<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 12px;background:#f9fafb;border-radius:8px;border-left:3px solid #8b5cf6;">
+            <span style="font-size:11px;color:#9ca3af;white-space:nowrap;margin-top:1px;">${s.날짜.substring(5)}</span>
+            <span style="font-size:13px;color:#374151;line-height:1.5;">${s.메모.trim()}</span>
+        </div>`;
     });
-    return Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,25).map(([word,count])=>({word,count}));
+    if(memos.length>30)html+=`<div style="text-align:center;font-size:12px;color:#9ca3af;padding:6px;">... 외 ${memos.length-30}건</div>`;
+    html+='</div>';
+    el.innerHTML=html;
 }
 
-function requestSleepWordCloud(){
+// ── Gemini AI 주제 분류: 버튼 클릭 ──────────────────────────
+function requestSleepTopicAnalysis(){
     const {filteredSleep}=getSleepTabFilter();
-    const memos=filteredSleep.map(s=>s.메모).filter(m=>m&&m.trim().length>0);
-    const btn=document.getElementById('wordCloudBtn');
-    const result=document.getElementById('wordCloudResult');
-    if(memos.length===0){result.innerHTML='<p style="text-align:center;color:#9ca3af;padding:30px;">현재 필터 범위에 수면 메모가 없습니다.</p>';return;}
-
-    // 1단계: 즉시 빠른 사전 분석 표시
-    const quickWords=clientWordFreq(memos);
-    renderWordCloud(quickWords,memos.length,'quick');
-
-    // 2단계: Gemini AI 분석 (로딩 표시를 상단에만)
-    btn.disabled=true;btn.textContent='⏳ Gemini 분석 중...';
-    const aiStatus=document.getElementById('wcAiStatus');
-    if(aiStatus)aiStatus.innerHTML='<span style="color:#8b5cf6;">🤖 Gemini AI가 더 정확한 분석 중...</span>';
-
+    const memos=filteredSleep.filter(s=>s.메모&&s.메모.trim()).map(s=>s.메모.trim());
+    const btn=document.getElementById('topicAnalysisBtn');
+    const result=document.getElementById('topicAnalysisResult');
+    if(memos.length===0){
+        result.innerHTML='<p style="color:#9ca3af;font-size:13px;">분석할 메모가 없습니다.</p>';return;
+    }
+    btn.disabled=true;btn.textContent='⏳ 분석 중...';
+    result.innerHTML='<div style="text-align:center;padding:28px;color:#6b7280;"><div class="spinner" style="margin:0 auto 12px;"></div>Gemini AI가 메모를 읽고 주제를 분류하고 있습니다...</div>';
     google.script.run
         .withSuccessHandler(function(res){
             btn.disabled=false;btn.textContent='🔄 다시 분석';
-            if(aiStatus)aiStatus.innerHTML='';
-            if(!res||!res.words||res.words.length===0){
-                if(aiStatus)aiStatus.innerHTML='<span style="color:#9ca3af;">AI 분석 결과 없음 — 빠른 분석 결과 유지</span>';
+            if(!res||!res.groups||res.groups.length===0){
+                const code=res&&res.error?res.error:'UNKNOWN';
+                const detail=res&&res.detail?`<br><span style="font-size:11px;color:#d1d5db;">${res.detail.substring(0,120)}</span>`:'';
+                result.innerHTML=`<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:16px;">
+                    <div style="font-size:13px;font-weight:600;color:#dc2626;margin-bottom:4px;">❌ 분류 실패: ${code}</div>
+                    <div style="font-size:12px;color:#6b7280;">
+                        ${code==='API_ERROR'||code.startsWith('API_')?'Gemini API 호출에 실패했습니다. API 키와 배포 상태를 확인해 주세요.':''}
+                        ${code==='PARSE_ERROR'?'AI 응답 형식이 달라 JSON 파싱에 실패했습니다. 재시도해 주세요.':''}
+                        ${code==='NO_CANDIDATE'?'Gemini가 안전 필터로 응답을 차단했습니다.':''}
+                        ${detail}
+                    </div>
+                    <button onclick="requestSleepTopicAnalysis()" style="margin-top:10px;padding:6px 14px;background:#6366f1;color:white;border:none;border-radius:6px;font-size:12px;cursor:pointer;">🔄 재시도</button>
+                </div>`;
                 return;
             }
-            renderWordCloud(res.words,res.memoCount,res.source);
+            renderTopicGroups(result,res.groups,res.memoCount);
         })
-        .withFailureHandler(function(){
-            btn.disabled=false;btn.textContent='🔍 Gemini AI로 메모 분석';
-            if(aiStatus)aiStatus.innerHTML='<span style="color:#ef4444;">AI 분석 실패 — 빠른 분석 결과 유지</span>';
+        .withFailureHandler(function(err){
+            btn.disabled=false;btn.textContent='🔍 AI 주제 분류';
+            result.innerHTML=`<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:16px;">
+                <div style="font-size:13px;font-weight:600;color:#dc2626;">❌ GAS 호출 실패</div>
+                <div style="font-size:12px;color:#6b7280;margin-top:4px;">${err&&err.message?err.message:'알 수 없는 오류'}</div>
+            </div>`;
         })
         .analyzeSleepMemosWordCloud(memos);
 }
 
-function renderWordCloud(words,memoCount,source){
-    const result=document.getElementById('wordCloudResult');
-    if(!words||words.length===0){result.innerHTML='<p style="text-align:center;color:#9ca3af;padding:30px;">분석할 단어가 없습니다.</p>';return;}
-    const max=words[0]?.count||1;
-    const colors=['#6366f1','#8b5cf6','#ec4899','#ef4444','#f59e0b','#10b981','#3b82f6','#06b6d4','#f97316','#0d9488'];
-    const srcLabel=source==='gemini'?'🤖 Gemini AI 분석':source==='quick'?'⚡ 빠른 사전 분석 (AI 분석 중...)':'📊 자체 분석';
-    const srcColor=source==='gemini'?'#8b5cf6':source==='quick'?'#f59e0b':'#6b7280';
-    let html=`<div id="wcAiStatus" style="font-size:12px;text-align:center;margin-bottom:6px;min-height:18px;"></div>`;
-    html+=`<div style="font-size:12px;color:#9ca3af;text-align:center;margin-bottom:12px;">메모 ${memoCount}건 분석 · 상위 ${words.length}개 단어 · <span style="color:${srcColor};font-weight:600;">${srcLabel}</span></div>`;
-    html+='<div style="display:flex;flex-wrap:wrap;gap:12px 20px;justify-content:center;align-items:center;padding:20px 16px;min-height:180px;background:#f9fafb;border-radius:12px;margin-bottom:16px;">';
-    words.forEach((w,i)=>{
-        const ratio=w.count/max;
-        const fs=Math.round(13+ratio*28);
-        const op=0.45+ratio*0.55;
-        const color=colors[i%colors.length];
-        const fw=ratio>0.5?700:500;
-        html+=`<span style="font-size:${fs}px;color:${color};opacity:${op};font-weight:${fw};cursor:default;transition:all .3s;" title="${w.count}회 등장">${w.word}</span>`;
+// ── 주제 그룹 렌더링 ─────────────────────────────────────────
+function renderTopicGroups(el,groups,memoCount){
+    const palette=[
+        {bg:'#eef2ff',border:'#6366f1',text:'#3730a3',badge:'#6366f1'},
+        {bg:'#f5f3ff',border:'#8b5cf6',text:'#5b21b6',badge:'#8b5cf6'},
+        {bg:'#fdf2f8',border:'#ec4899',text:'#9d174d',badge:'#ec4899'},
+        {bg:'#fff7ed',border:'#f97316',text:'#9a3412',badge:'#f97316'},
+        {bg:'#ecfdf5',border:'#10b981',text:'#065f46',badge:'#10b981'},
+        {bg:'#eff6ff',border:'#3b82f6',text:'#1e40af',badge:'#3b82f6'},
+        {bg:'#f9fafb',border:'#9ca3af',text:'#374151',badge:'#9ca3af'},
+    ];
+    const total=groups.reduce((s,g)=>s+(g.count||g.sentences?.length||0),0);
+    let html=`<div style="font-size:12px;color:#6b7280;margin-bottom:16px;">메모 <strong>${memoCount}건</strong> · <strong>${groups.length}개</strong> 주제로 분류됨</div>`;
+    html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;">';
+    groups.forEach((g,i)=>{
+        const c=palette[i%palette.length];
+        const cnt=g.count||g.sentences?.length||0;
+        const pct=total>0?Math.round(cnt/total*100):0;
+        html+=`<div style="background:${c.bg};border:1.5px solid ${c.border};border-radius:14px;padding:16px 18px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                <span style="font-size:14px;font-weight:700;color:${c.text};">${g.topic||'기타'}</span>
+                <span style="background:${c.badge};color:white;font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px;">${cnt}건 · ${pct}%</span>
+            </div>
+            <div style="background:${c.border}22;border-radius:4px;height:4px;margin-bottom:12px;">
+                <div style="background:${c.border};height:4px;border-radius:4px;width:${pct}%;transition:width .6s;"></div>
+            </div>
+            <ul style="margin:0;padding-left:16px;display:flex;flex-direction:column;gap:5px;">
+                ${(g.sentences||[]).map(s=>`<li style="font-size:13px;color:#374151;line-height:1.5;">${s}</li>`).join('')}
+            </ul>
+        </div>`;
     });
     html+='</div>';
-    html+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">';
-    html+='<span style="font-size:13px;font-weight:600;color:#374151;margin-right:4px;">🏆 주요 단어:</span>';
-    const badges=['🥇','🥈','🥉','4️⃣','5️⃣'];
-    words.slice(0,5).forEach((w,i)=>{html+=`<span style="background:#f3f4f6;padding:4px 12px;border-radius:20px;font-size:13px;">${badges[i]} ${w.word} (${w.count}회)</span>`;});
-    html+='</div>';
-    result.innerHTML=html;
-    // Gemini 결과가 오면 상태 메시지 업데이트
-    if(source==='gemini'){const s=document.getElementById('wcAiStatus');if(s)s.innerHTML='';}
-    else if(source==='quick'){const s=document.getElementById('wcAiStatus');if(s)s.innerHTML='<span style="color:#8b5cf6;">🤖 Gemini AI가 더 정확한 분석 중...</span>';}
+    el.innerHTML=html;
 }
 
 function formatSleepTime(raw){
