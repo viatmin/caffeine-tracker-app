@@ -565,6 +565,7 @@
             <div class="chart-card"><h3 class="chart-title">카페인 단계별 학생 수 (7일 평균)</h3><div class="chart-container"><canvas id="gradeCaffeineChart"></canvas></div></div>
             <div class="chart-card"><h3 class="chart-title">음료 종류별 비율</h3><div class="chart-container"><canvas id="drinkTypeChart"></canvas></div></div>
             <div class="chart-card"><h3 class="chart-title">카페인 섭취 시간대</h3><div class="chart-container"><canvas id="caffeineTimeChart"></canvas></div></div>
+            <div class="chart-card" style="grid-column:1/-1;"><h3 class="chart-title">☕ 카페인 섭취 이유 분포</h3><div class="chart-container" style="height:280px;"><canvas id="cafReasonChart"></canvas></div><div id="cafReasonEmpty" style="display:none;text-align:center;color:#9ca3af;padding:40px;font-size:14px;">섭취 이유 기록이 없습니다.</div></div>
         </div>
     </div>
     <!-- 수면 분석 -->
@@ -587,6 +588,14 @@
             <div class="chart-card"><h3 class="chart-title">평균 기상 시간 분포</h3><div class="chart-container"><canvas id="wakeupChart"></canvas></div></div>
             <div class="chart-card"><h3 class="chart-title">평균 7일간 컨디션 분포</h3><div class="chart-container"><canvas id="avgSleepChart"></canvas></div></div>
             <div class="chart-card"><h3 class="chart-title">수면시간 분포</h3><div class="chart-container"><canvas id="sleepDistChart"></canvas></div></div>
+            <div class="chart-card" style="grid-column:1/-1;">
+                <h3 class="chart-title">📝 수면 메모 워드클라우드 <span style="font-size:13px;font-weight:400;color:#9ca3af;">Gemini AI 분석</span></h3>
+                <div style="text-align:center;margin-bottom:16px;">
+                    <button onclick="requestSleepWordCloud()" id="wordCloudBtn" class="btn btn-primary" style="background:#8b5cf6;">🔍 Gemini AI로 메모 분석</button>
+                    <span style="font-size:12px;color:#9ca3af;margin-left:12px;">현재 필터된 학생들의 수면 메모를 분석합니다</span>
+                </div>
+                <div id="wordCloudResult"></div>
+            </div>
         </div>
     </div>
     <!-- 학생 목록 -->
@@ -1268,8 +1277,8 @@ function loadDataFromSheet(){
             try{
                 if(!result.success)throw new Error(result.error||'데이터 로드 실패');
                 studentsData=(result.students||[]).map(s=>({학번:String(s.학번),이름:String(s.이름),학년:String(s.학년),반:String(s.반),번호:String(s.번호)}));
-                caffeineData=(result.caffeine||[]).map(c=>({학번:String(c.학번),음료명:String(c.음료명||''),함량:parseFloat(c.함량)||0,섭취시간:String(c.섭취시간||'')}));
-                sleepData=(result.sleep||[]).map(s=>({학번:String(s.학번),날짜:String(s.날짜||''),취침:String(s.취침||''),기상:String(s.기상||''),시간:parseFloat(s.시간)||0,컨디션:String(s['수면 후 컨디션']||'')}));
+                caffeineData=(result.caffeine||[]).map(c=>({학번:String(c.학번),음료명:String(c.음료명||''),함량:parseFloat(c.함량)||0,섭취시간:String(c.섭취시간||''),섭취이유:String(c.섭취이유||'')}));
+                sleepData=(result.sleep||[]).map(s=>({학번:String(s.학번),날짜:String(s.날짜||''),취침:String(s.취침||''),기상:String(s.기상||''),시간:parseFloat(s.시간)||0,컨디션:String(s['수면 후 컨디션']||''),메모:String(s.메모||'')}));
                 infoData=(result.info||[]).map(i=>({학번:String(i.학번),몸무게:parseFloat(i.몸무게)||60}));
 
                 // ⭐ 교사 수여 뱃지: GAS 시트(source of truth) → manualAwards 동기화
@@ -1632,6 +1641,23 @@ function updateCaffeineTab(){
         type:'bar',data:{labels:ph.map(h=>h+'시'),datasets:[{label:'섭취 횟수',data:ph.map(h=>hm[h]),backgroundColor:'rgba(239,68,68,0.7)',borderWidth:0,borderRadius:4}]},
         options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
     });
+    // 섭취 이유 분포
+    const rm={};filteredCaf.forEach(c=>{const r=(c.섭취이유||'').trim();if(r)rm[r]=(rm[r]||0)+1;});
+    const reasonEmpty=document.getElementById('cafReasonEmpty');
+    if(charts.cr)charts.cr.destroy();
+    if(Object.keys(rm).length===0){
+        reasonEmpty.style.display='block';
+        document.getElementById('cafReasonChart').style.display='none';
+    } else {
+        reasonEmpty.style.display='none';
+        document.getElementById('cafReasonChart').style.display='block';
+        const rd=Object.entries(rm).sort((a,b)=>b[1]-a[1]);
+        charts.cr=new Chart(document.getElementById('cafReasonChart').getContext('2d'),{
+            type:'bar',
+            data:{labels:rd.map(d=>d[0]),datasets:[{label:'횟수',data:rd.map(d=>d[1]),backgroundColor:['#6366f1','#8b5cf6','#ec4899','#ef4444','#f59e0b','#10b981','#3b82f6','#06b6d4','#f97316','#0d9488'],borderWidth:0,borderRadius:6}]},
+            options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.raw}회`}}},scales:{x:{beginAtZero:true,ticks:{stepSize:1}}}}
+        });
+    }
 }
 function getSleepTabFilter(){
     const d=document.getElementById('sleepDateFilter');
@@ -2228,22 +2254,99 @@ function refreshModalData(){
 
     document.getElementById('modalCaffeineTable').innerHTML=cafRecords.length===0
         ?'<tr><td colspan="5" style="text-align:center;color:#9ca3af;padding:20px;">기록 없음</td></tr>'
-        :cafRecords.map(r=>{
+        :cafRecords.map((r,i)=>{
             const cumul=r._cumul||r.함량;
             const dk=r.섭취시간.split(' ')[0];
             const isLastOfDay=(cumul===dayMaxCumul[dk]);
-            // ⭐ 개별 기록이 있으므로 hasRecord=true
             const si=getCafStatusInfo(cumul,lim,true);
             const statusCell=isLastOfDay
                 ?`<span class="status-badge ${si.cls}">${si.text}</span>`
                 :`<span style="color:#d1d5db;font-size:12px;">-</span>`;
-            return `<tr><td>${r.섭취시간}</td><td>${r.음료명}</td><td><strong>${r.함량}mg</strong></td><td style="color:#6b7280;font-size:13px;">${cumul}mg / ${Math.round(lim)}mg</td><td>${statusCell}</td></tr>`;
+            const uid=`caf_detail_${i}`;
+            const reason=r.섭취이유&&r.섭취이유.trim()?r.섭취이유.trim():'<span style="color:#9ca3af;">이유 미작성</span>';
+            return `<tr onclick="toggleDetailRow('${uid}')" style="cursor:pointer;" title="클릭하면 섭취 이유 확인"><td>${r.섭취시간}</td><td>${r.음료명}</td><td><strong>${r.함량}mg</strong></td><td style="color:#6b7280;font-size:13px;">${cumul}mg / ${Math.round(lim)}mg</td><td>${statusCell}</td></tr><tr id="${uid}" style="display:none;background:#fef9f0;"><td colspan="5" style="padding:8px 16px;font-size:13px;color:#92400e;">💬 섭취 이유: ${reason}</td></tr>`;
         }).join('');
 
     const sleepRecords=sleepData.filter(sl=>sl.학번===currentStudentId&&dates.includes(sl.날짜)).sort((a,b)=>b.날짜.localeCompare(a.날짜));
     document.getElementById('modalSleepTable').innerHTML=sleepRecords.length===0
         ?'<tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:20px;">기록 없음</td></tr>'
-        :sleepRecords.map(r=>{const si=getSleepStatusInfo(r.시간);return `<tr><td style="white-space:nowrap">${r.날짜}</td><td style="white-space:nowrap">${formatSleepTime(r.취침)}</td><td style="white-space:nowrap">${formatSleepTime(r.기상)}</td><td><strong style="color:${si.color}">${r.시간}h</strong></td><td style="font-size:18px;">${r.컨디션}</td><td><span class="status-badge ${si.cls}">${si.text}</span></td></tr>`;}).join('');
+        :sleepRecords.map((r,i)=>{const si=getSleepStatusInfo(r.시간);const uid=`slp_detail_${i}`;const memo=r.메모&&r.메모.trim()?r.메모.trim():'<span style="color:#9ca3af;">메모 없음</span>';return `<tr onclick="toggleDetailRow('${uid}')" style="cursor:pointer;" title="클릭하면 수면 메모 확인"><td style="white-space:nowrap">${r.날짜}</td><td style="white-space:nowrap">${formatSleepTime(r.취침)}</td><td style="white-space:nowrap">${formatSleepTime(r.기상)}</td><td><strong style="color:${si.color}">${r.시간}h</strong></td><td style="font-size:18px;">${r.컨디션}</td><td><span class="status-badge ${si.cls}">${si.text}</span></td></tr><tr id="${uid}" style="display:none;background:#f0fdf4;"><td colspan="6" style="padding:8px 16px;font-size:13px;color:#166534;">📝 수면 메모: ${memo}</td></tr>`;}).join('');
+}
+
+function toggleDetailRow(id){const row=document.getElementById(id);if(row)row.style.display=row.style.display==='none'?'table-row':'none';}
+
+function clientWordFreq(memos){
+    const stop=new Set(['이','가','을','를','은','는','에','에서','로','으로','의','과','와','도','만','부터','까지','이다','하다','있다','없다','그','저','나','내','그리고','하지만','그래서','또','더','많이','조금','너무','매우','정말','좀','잘','못','안','수','것','때','후','전','오늘','어제','내일','같다','같아','이','거','데','게','해','됐','됩','했','했어','했음','같은','하는','되는','있는','없는','않는','이런','그런','어떤','아','어','음','으','하여','하고','하면','해서','해도','하니','하지','하면서','그냥','진짜','막','계속','아직','이제','다시','계속','좀더','빨리']);
+    const freq={};
+    memos.forEach(m=>{
+        String(m).replace(/[^\uAC00-\uD7AF a-zA-Z]/g,' ').split(/\s+/).forEach(w=>{
+            if(w.length>=2&&!stop.has(w))freq[w]=(freq[w]||0)+1;
+        });
+    });
+    return Object.entries(freq).sort((a,b)=>b[1]-a[1]).slice(0,25).map(([word,count])=>({word,count}));
+}
+
+function requestSleepWordCloud(){
+    const {filteredSleep}=getSleepTabFilter();
+    const memos=filteredSleep.map(s=>s.메모).filter(m=>m&&m.trim().length>0);
+    const btn=document.getElementById('wordCloudBtn');
+    const result=document.getElementById('wordCloudResult');
+    if(memos.length===0){result.innerHTML='<p style="text-align:center;color:#9ca3af;padding:30px;">현재 필터 범위에 수면 메모가 없습니다.</p>';return;}
+
+    // 1단계: 즉시 빠른 사전 분석 표시
+    const quickWords=clientWordFreq(memos);
+    renderWordCloud(quickWords,memos.length,'quick');
+
+    // 2단계: Gemini AI 분석 (로딩 표시를 상단에만)
+    btn.disabled=true;btn.textContent='⏳ Gemini 분석 중...';
+    const aiStatus=document.getElementById('wcAiStatus');
+    if(aiStatus)aiStatus.innerHTML='<span style="color:#8b5cf6;">🤖 Gemini AI가 더 정확한 분석 중...</span>';
+
+    google.script.run
+        .withSuccessHandler(function(res){
+            btn.disabled=false;btn.textContent='🔄 다시 분석';
+            if(aiStatus)aiStatus.innerHTML='';
+            if(!res||!res.words||res.words.length===0){
+                if(aiStatus)aiStatus.innerHTML='<span style="color:#9ca3af;">AI 분석 결과 없음 — 빠른 분석 결과 유지</span>';
+                return;
+            }
+            renderWordCloud(res.words,res.memoCount,res.source);
+        })
+        .withFailureHandler(function(){
+            btn.disabled=false;btn.textContent='🔍 Gemini AI로 메모 분석';
+            if(aiStatus)aiStatus.innerHTML='<span style="color:#ef4444;">AI 분석 실패 — 빠른 분석 결과 유지</span>';
+        })
+        .analyzeSleepMemosWordCloud(memos);
+}
+
+function renderWordCloud(words,memoCount,source){
+    const result=document.getElementById('wordCloudResult');
+    if(!words||words.length===0){result.innerHTML='<p style="text-align:center;color:#9ca3af;padding:30px;">분석할 단어가 없습니다.</p>';return;}
+    const max=words[0]?.count||1;
+    const colors=['#6366f1','#8b5cf6','#ec4899','#ef4444','#f59e0b','#10b981','#3b82f6','#06b6d4','#f97316','#0d9488'];
+    const srcLabel=source==='gemini'?'🤖 Gemini AI 분석':source==='quick'?'⚡ 빠른 사전 분석 (AI 분석 중...)':'📊 자체 분석';
+    const srcColor=source==='gemini'?'#8b5cf6':source==='quick'?'#f59e0b':'#6b7280';
+    let html=`<div id="wcAiStatus" style="font-size:12px;text-align:center;margin-bottom:6px;min-height:18px;"></div>`;
+    html+=`<div style="font-size:12px;color:#9ca3af;text-align:center;margin-bottom:12px;">메모 ${memoCount}건 분석 · 상위 ${words.length}개 단어 · <span style="color:${srcColor};font-weight:600;">${srcLabel}</span></div>`;
+    html+='<div style="display:flex;flex-wrap:wrap;gap:12px 20px;justify-content:center;align-items:center;padding:20px 16px;min-height:180px;background:#f9fafb;border-radius:12px;margin-bottom:16px;">';
+    words.forEach((w,i)=>{
+        const ratio=w.count/max;
+        const fs=Math.round(13+ratio*28);
+        const op=0.45+ratio*0.55;
+        const color=colors[i%colors.length];
+        const fw=ratio>0.5?700:500;
+        html+=`<span style="font-size:${fs}px;color:${color};opacity:${op};font-weight:${fw};cursor:default;transition:all .3s;" title="${w.count}회 등장">${w.word}</span>`;
+    });
+    html+='</div>';
+    html+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">';
+    html+='<span style="font-size:13px;font-weight:600;color:#374151;margin-right:4px;">🏆 주요 단어:</span>';
+    const badges=['🥇','🥈','🥉','4️⃣','5️⃣'];
+    words.slice(0,5).forEach((w,i)=>{html+=`<span style="background:#f3f4f6;padding:4px 12px;border-radius:20px;font-size:13px;">${badges[i]} ${w.word} (${w.count}회)</span>`;});
+    html+='</div>';
+    result.innerHTML=html;
+    // Gemini 결과가 오면 상태 메시지 업데이트
+    if(source==='gemini'){const s=document.getElementById('wcAiStatus');if(s)s.innerHTML='';}
+    else if(source==='quick'){const s=document.getElementById('wcAiStatus');if(s)s.innerHTML='<span style="color:#8b5cf6;">🤖 Gemini AI가 더 정확한 분석 중...</span>';}
 }
 
 function formatSleepTime(raw){
