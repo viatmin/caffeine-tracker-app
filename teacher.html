@@ -688,6 +688,7 @@
             </div>
             <div class="filter-buttons" style="align-items:center;">
                 <button class="filter-btn active" id="filterAll" onclick="clearAllFilters()">전체 보기 <span class="badge" id="badgeAll">0</span></button>
+                <button class="filter-btn" id="filterRecorded" onclick="toggleSingleFilter('recorded')">오늘 기록 <span class="badge" id="badgeRecorded">0</span></button>
                 <button class="filter-btn" id="filterNotRecorded" onclick="toggleSingleFilter('notRecorded')">오늘 미기록 <span class="badge" id="badgeNotRecorded">0</span></button>
 
                 <!-- ☕ 카페인 분석 드롭다운 -->
@@ -1998,7 +1999,11 @@ function filterStudents(){
     const d7=getStudentDates();
     const getRatio=id=>{const ac=avgCafForDates(id,d7);return ac/getLimit(id);};
 
-    // 단일 필터 (전체보기, 오늘 미기록)
+    // 단일 필터 (전체보기, 오늘 기록, 오늘 미기록)
+    if(activeFilters.single==='recorded'){
+        f=f.filter(s=>caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(fd))||sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===fd));
+        updateBadges();renderStudentGrid(f);return;
+    }
     if(activeFilters.single==='notRecorded'){
         f=f.filter(s=>!caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(fd))&&!sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===fd));
         updateBadges();renderStudentGrid(f);return;
@@ -2079,6 +2084,7 @@ function updateBadges(){
     const d7=getStudentDates();
     const n=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
     n('badgeAll',studentsData.length);
+    n('badgeRecorded',studentsData.filter(s=>caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(fd))||sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===fd)).length);
     n('badgeNotRecorded',studentsData.filter(s=>!caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(fd))&&!sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===fd)).length);
 
     // 카페인 단계별 카운트
@@ -2204,6 +2210,7 @@ function _syncAwardUI(){
 function toggleCafItem(key){
     activeFilters.single='';
     document.getElementById('filterAll').classList.remove('active');
+    document.getElementById('filterRecorded')?.classList.remove('active');
     document.getElementById('filterNotRecorded').classList.remove('active');
     if(activeFilters.caf.has(key))activeFilters.caf.delete(key);
     else activeFilters.caf.add(key);
@@ -2214,6 +2221,7 @@ function toggleCafItem(key){
 function toggleSleepItem(key){
     activeFilters.single='';
     document.getElementById('filterAll').classList.remove('active');
+    document.getElementById('filterRecorded')?.classList.remove('active');
     document.getElementById('filterNotRecorded').classList.remove('active');
     if(activeFilters.sleep.has(key))activeFilters.sleep.delete(key);
     else activeFilters.sleep.add(key);
@@ -2225,6 +2233,7 @@ function selectAllCaf(e){
     e.stopPropagation();
     activeFilters.single='';
     document.getElementById('filterAll').classList.remove('active');
+    document.getElementById('filterRecorded')?.classList.remove('active');
     document.getElementById('filterNotRecorded').classList.remove('active');
     CAF_KEYS.forEach(k=>activeFilters.caf.add(k));
     _syncCafUI();filterStudents();
@@ -2240,6 +2249,7 @@ function selectAllSleep(e){
     e.stopPropagation();
     activeFilters.single='';
     document.getElementById('filterAll').classList.remove('active');
+    document.getElementById('filterRecorded')?.classList.remove('active');
     document.getElementById('filterNotRecorded').classList.remove('active');
     SLEEP_KEYS.forEach(k=>activeFilters.sleep.add(k));
     _syncSleepUI();filterStudents();
@@ -2256,6 +2266,7 @@ function clearSleep(e){
 function toggleAwardItem(key){
     activeFilters.single='';
     document.getElementById('filterAll').classList.remove('active');
+    document.getElementById('filterRecorded')?.classList.remove('active');
     document.getElementById('filterNotRecorded').classList.remove('active');
     if(activeFilters.award.has(key))activeFilters.award.delete(key);
     else activeFilters.award.add(key);
@@ -2267,6 +2278,7 @@ function selectAllAward(e){
     e.stopPropagation();
     activeFilters.single='';
     document.getElementById('filterAll').classList.remove('active');
+    document.getElementById('filterRecorded')?.classList.remove('active');
     document.getElementById('filterNotRecorded').classList.remove('active');
     AWARD_KEYS.forEach(k=>activeFilters.award.add(k));
     _syncAwardUI();filterStudents();
@@ -2286,6 +2298,7 @@ function clearAllFilters(){
     activeFilters.award.clear();
     _syncCafUI();_syncSleepUI();_syncAwardUI();
     document.getElementById('filterAll').classList.add('active');
+    document.getElementById('filterRecorded')?.classList.remove('active');
     document.getElementById('filterNotRecorded').classList.remove('active');
     filterStudents();
 }
@@ -2295,11 +2308,13 @@ function toggleSingleFilter(type){
     activeFilters.caf.clear();activeFilters.sleep.clear();activeFilters.award.clear();
     _syncCafUI();_syncSleepUI();_syncAwardUI();
     document.getElementById('filterAll').classList.remove('active');
+    document.getElementById('filterRecorded')?.classList.toggle('active',type==='recorded');
     document.getElementById('filterNotRecorded').classList.toggle('active',type==='notRecorded');
     filterStudents();
 }
 function setFilterType(t){
     if(t==='all')clearAllFilters();
+    else if(t==='recorded')toggleSingleFilter('recorded');
     else if(t==='notRecorded')toggleSingleFilter('notRecorded');
 }
 function updateStudentGrid(){const dtEl=document.getElementById('studentDateFilter');if(dtEl&&!dtEl.value){dtEl.value=today;dtEl.max=today;}onStudentDateChange();}
