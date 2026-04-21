@@ -4541,7 +4541,7 @@ function checkCumulativeDays(studentId, type, n, startDate, endDate){
 function detectPendingBadges(){
     const awarded=new Set();
     Object.entries(manualAwards).forEach(([sid,list])=>{
-        list.forEach(a=>{if(a.badgeId)awarded.add(sid+'|'+a.badgeId);});
+        list.forEach(a=>{const bid=a.badgeId||a.awardId;if(bid)awarded.add(sid+'|'+bid);});
     });
     const dismissed=new Set(dismissedBadges.map(d=>d.studentId+'|'+d.badgeId));
     const newPending=[];
