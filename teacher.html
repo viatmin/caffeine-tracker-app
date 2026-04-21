@@ -4558,8 +4558,13 @@ function detectPendingBadges(){
             if(badge.method==='consecutive'){
                 achieved=checkConsecutiveDays(s.학번,badge.type,badge.days,today);
             } else if(badge.method==='cumulative'){
-                if(S.challengeStart&&S.challengeEnd)
-                    achieved=checkCumulativeDays(s.학번,badge.type,badge.days,S.challengeStart,S.challengeEnd);
+                let cStart=S.challengeStart, cEnd=S.challengeEnd;
+                if(!cStart||!cEnd){
+                    // 챌린지 기간 미설정 시 전체 데이터 날짜 범위로 자동 대체
+                    const allDates=[...caffeineData.map(c=>c.섭취시간.substring(0,10)),...sleepData.map(sl=>sl.날짜)].filter(Boolean).sort();
+                    if(allDates.length){cStart=allDates[0];cEnd=allDates[allDates.length-1];}
+                }
+                if(cStart&&cEnd) achieved=checkCumulativeDays(s.학번,badge.type,badge.days,cStart,cEnd);
             }
             if(achieved)newPending.push({studentId:s.학번,badgeId:badge.id,detectedAt:today});
         });
