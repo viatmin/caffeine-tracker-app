@@ -55,10 +55,6 @@
     .quick-btn:active { transform: scale(0.95); }
     .condition-btn { transition: all 0.2s; border: 2px solid transparent; }
     .condition-btn.selected { border-color: #6366f1; background-color: #f5f3ff; transform: scale(1.05); }
-    .drum-tab-active { background:white; border-bottom:2px solid #6366f1 !important; color:#4f46e5; font-weight:700; }
-    .drum-tab-inactive { background:#f9fafb; border-bottom:2px solid #e5e7eb !important; color:#9ca3af; font-weight:600; }
-    .time-input { -moz-appearance:textfield; }
-    .time-input::-webkit-outer-spin-button, .time-input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
     
     #refreshBtn {
       position: relative;
@@ -581,34 +577,16 @@
                 class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-400">
             </div>
 
-            <!-- 숨겨진 실제 time 입력 (기존 JS 호환) -->
-            <input type="hidden" id="sleepStart">
-            <input type="hidden" id="sleepEnd">
-
-            <!-- 시간 피커 -->
-            <div class="rounded-2xl border-2 border-gray-200 overflow-hidden">
-              <div class="flex">
-                <button id="tabBed" onclick="switchTimeTab('bed')" class="drum-tab-active flex-1 py-3 text-sm border-b-2 transition-all">
-                  🛏️ 취침&nbsp;<span id="labelBedtime" class="font-normal text-xs">--:--</span>
-                </button>
-                <button id="tabWake" onclick="switchTimeTab('wake')" class="drum-tab-inactive flex-1 py-3 text-sm border-b-2 transition-all">
-                  ⏰ 기상&nbsp;<span id="labelWaketime" class="font-normal text-xs">--:--</span>
-                </button>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-2">취침 시간</label>
+                <input type="time" id="sleepStart" 
+                  class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-400">
               </div>
-              <div class="flex items-center justify-center gap-3 py-8 bg-gray-50">
-                <button id="timeAmPm" onclick="toggleTimeAmPm()"
-                  class="px-4 py-5 rounded-2xl bg-white border-2 border-indigo-200 text-indigo-700 font-bold text-xl min-w-[72px] shadow-sm active:bg-indigo-50 transition-colors">오후</button>
-                <div class="flex items-center gap-1 bg-white border-2 border-indigo-200 rounded-2xl px-3 py-3 shadow-sm">
-                  <input id="timeH" type="number" min="1" max="12" inputmode="numeric"
-                    oninput="onTimeInput()" onblur="onTimeBlur('timeH',1,12)"
-                    class="time-input w-16 text-center text-4xl font-bold outline-none bg-transparent text-gray-800"
-                    placeholder="11">
-                  <span class="text-4xl font-bold text-gray-300 px-1">:</span>
-                  <input id="timeM" type="number" min="0" max="59" inputmode="numeric"
-                    oninput="onTimeInput()" onblur="onTimeBlur('timeM',0,59)"
-                    class="time-input w-16 text-center text-4xl font-bold outline-none bg-transparent text-gray-800"
-                    placeholder="00">
-                </div>
+              <div>
+                <label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-2">기상 시간</label>
+                <input type="time" id="sleepEnd" 
+                  class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-400">
               </div>
             </div>
 
@@ -673,25 +651,11 @@
               </div>
             </div>
           </div>
-          <!-- 챌린지 뱃지 (동적 렌더) -->
-          <div id="challengeBadgeGrid" class="grid grid-cols-2 gap-3"></div>
+          <!-- 챌린지 뱃지 (동적 렌더 — 카페인 좌열 · 수면 우열) -->
+          <div id="challengeBadgeGrid" class="grid grid-cols-2 gap-3 items-start"></div>
           <!-- 경고 / 응원 메시지 -->
           <div id="badge-challenge-msg" class="hidden mt-3 p-3 rounded-xl flex items-start gap-2"></div>
           <div id="badge-streak-info" class="mt-3 text-xs text-center text-gray-400"></div>
-
-          <!-- 👩‍🏫 선생님 수여 뱃지 영역 -->
-          <div id="teacherAwardSection" class="hidden mt-4 pt-4 border-t-2 border-purple-100">
-            <button onclick="toggleTeacherAwardList()" class="w-full flex items-center justify-between mb-1 group" id="teacherAwardToggleBtn">
-              <h5 class="text-sm font-bold text-purple-700 flex items-center gap-2">
-                <span class="text-base">👩‍🏫</span> 선생님이 주신 뱃지
-              </h5>
-              <div class="flex items-center gap-2">
-                <span id="teacherAwardCountBadge" class="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">0개</span>
-                <span id="teacherAwardChevron" style="transition:transform 0.25s;display:inline-block;color:#7c3aed;font-size:12px;">▲</span>
-              </div>
-            </button>
-            <div id="teacherAwardList" class="space-y-2 mt-3" style="overflow:hidden;transition:max-height 0.3s ease,opacity 0.3s ease;max-height:1000px;opacity:1;"></div>
-          </div>
         </div>
 
         <!-- 월별 달력 -->
@@ -980,7 +944,7 @@
         <!-- 퍼플 그라데이션 헤더 -->
         <div class="px-6 pt-6 pb-4 text-center" style="background:linear-gradient(135deg,#7c3aed 0%,#6366f1 100%);">
           <div class="flex justify-center gap-1 mb-2" id="tbModalEmojiRow" style="font-size:2.2rem;line-height:1;flex-wrap:wrap;min-height:2.5rem;"></div>
-          <h2 class="text-lg font-black text-white">🎉 선생님이 뱃지를 주셨어요!</h2>
+          <h2 class="text-lg font-black text-white" id="tbModalTitle">🎉 새 뱃지를 얻었습니다!</h2>
           <p class="text-purple-200 text-xs mt-1">달력 탭에서 언제든 다시 볼 수 있어요</p>
         </div>
         <!-- 뱃지 목록 스크롤 영역 -->
@@ -1312,7 +1276,6 @@
         const lastSleepEnd = localStorage.getItem('lastSleepEnd_' + user.studentId);
         if (lastSleepStart) document.getElementById('sleepStart').value = lastSleepStart;
         if (lastSleepEnd) document.getElementById('sleepEnd').value = lastSleepEnd;
-        initTimePicker();
       }
       if(id === 'settings') {
         setTimeout(loadMyInquiries, 300);
@@ -1541,124 +1504,6 @@
         })
         .testConnection();
     }
-
-    // ── 드럼롤 시간 피커 (공용 헬퍼) ────────────────────────
-    function _drumTo24h(ampm, h12, m) {
-      let h = h12;
-      if (ampm === 0) { if (h === 12) h = 0; }
-      else            { if (h !== 12) h += 12; }
-      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-    }
-    function _24hToDrum(t) {
-      if (!t || !t.includes(':')) return {ampm:1,h:11,m:0};
-      const [hs,ms] = t.split(':');
-      let h24=parseInt(hs), m=parseInt(ms), ampm, h12;
-      if      (h24===0)  { ampm=0; h12=12; }
-      else if (h24<12)   { ampm=0; h12=h24; }
-      else if (h24===12) { ampm=1; h12=12; }
-      else               { ampm=1; h12=h24-12; }
-      return {ampm, h:h12, m};
-    }
-    function _drumFmtLabel(t) {
-      if (!t||!t.includes(':')) return '--:--';
-      const [hs,ms]=t.split(':'); const h24=parseInt(hs);
-      return `${h24<12?'오전':'오후'} ${h24%12||12}:${ms}`;
-    }
-
-    // ── 메인 시간 입력 피커 ──────────────────────────────────
-    let _timeTab='bed', _timeState={bed:{ampm:1,h:11,m:0},wake:{ampm:0,h:6,m:30}};
-
-    function initTimePicker() {
-      const sv=document.getElementById('sleepStart').value;
-      const ev=document.getElementById('sleepEnd').value;
-      if(sv) _timeState.bed =_24hToDrum(sv);
-      if(ev) _timeState.wake=_24hToDrum(ev);
-      if(!sv) document.getElementById('sleepStart').value=_drumTo24h(_timeState.bed.ampm,_timeState.bed.h,_timeState.bed.m);
-      if(!ev) document.getElementById('sleepEnd').value  =_drumTo24h(_timeState.wake.ampm,_timeState.wake.h,_timeState.wake.m);
-      _timeTab='bed'; _applyTimeState(_timeState.bed); _updateTimeLabels();
-    }
-    function _applyTimeState(s) {
-      document.getElementById('timeAmPm').textContent=s.ampm===0?'오전':'오후';
-      document.getElementById('timeH').value=s.h;
-      document.getElementById('timeM').value=String(s.m).padStart(2,'0');
-    }
-    function _updateTimeLabels() {
-      const b=document.getElementById('labelBedtime'),w=document.getElementById('labelWaketime');
-      if(b) b.textContent=_drumFmtLabel(document.getElementById('sleepStart').value);
-      if(w) w.textContent=_drumFmtLabel(document.getElementById('sleepEnd').value);
-    }
-    function _saveTimeState() {
-      const ampm=document.getElementById('timeAmPm').textContent==='오전'?0:1;
-      const h=Math.max(1,Math.min(12,parseInt(document.getElementById('timeH').value)||1));
-      const m=Math.max(0,Math.min(59,parseInt(document.getElementById('timeM').value)||0));
-      _timeState[_timeTab]={ampm,h,m};
-      document.getElementById(_timeTab==='bed'?'sleepStart':'sleepEnd').value=_drumTo24h(ampm,h,m);
-      _updateTimeLabels();
-    }
-    function switchTimeTab(tab) {
-      _saveTimeState(); _timeTab=tab; _applyTimeState(_timeState[tab]);
-      const b=document.getElementById('tabBed'),w=document.getElementById('tabWake');
-      if(tab==='bed'){b.className='drum-tab-active flex-1 py-3 text-sm border-b-2 transition-all';w.className='drum-tab-inactive flex-1 py-3 text-sm border-b-2 transition-all';}
-      else           {w.className='drum-tab-active flex-1 py-3 text-sm border-b-2 transition-all';b.className='drum-tab-inactive flex-1 py-3 text-sm border-b-2 transition-all';}
-      _updateTimeLabels();
-    }
-    function toggleTimeAmPm() {
-      const b=document.getElementById('timeAmPm'); b.textContent=b.textContent==='오전'?'오후':'오전'; _saveTimeState();
-    }
-    function onTimeInput() { _saveTimeState(); }
-    function onTimeBlur(id,min,max) {
-      const el=document.getElementById(id); let v=parseInt(el.value);
-      if(isNaN(v)||v<min) v=min; if(v>max) v=max;
-      el.value=(id==='timeM')?String(v).padStart(2,'0'):v;
-      _saveTimeState();
-    }
-
-    // ── 수면 편집 시간 피커 ──────────────────────────────────
-    let _eTimeTab='bed', _eTimeState={bed:{ampm:1,h:11,m:0},wake:{ampm:0,h:6,m:30}};
-
-    function initEditTimePicker(sv,ev) {
-      _eTimeState.bed =_24hToDrum(sv||'23:00');
-      _eTimeState.wake=_24hToDrum(ev||'06:30');
-      document.getElementById('editSleepStart').value=sv||'23:00';
-      document.getElementById('editSleepEnd').value  =ev||'06:30';
-      _eTimeTab='bed'; _applyETimeState(_eTimeState.bed); _updateETimeLabels();
-    }
-    function _applyETimeState(s) {
-      document.getElementById('eTimeAmPm').textContent=s.ampm===0?'오전':'오후';
-      document.getElementById('eTimeH').value=s.h;
-      document.getElementById('eTimeM').value=String(s.m).padStart(2,'0');
-    }
-    function _updateETimeLabels() {
-      const b=document.getElementById('eLabelBed'),w=document.getElementById('eLabelWake');
-      if(b) b.textContent=_drumFmtLabel(document.getElementById('editSleepStart').value);
-      if(w) w.textContent=_drumFmtLabel(document.getElementById('editSleepEnd').value);
-    }
-    function _saveETimeState() {
-      const ampm=document.getElementById('eTimeAmPm').textContent==='오전'?0:1;
-      const h=Math.max(1,Math.min(12,parseInt(document.getElementById('eTimeH').value)||1));
-      const m=Math.max(0,Math.min(59,parseInt(document.getElementById('eTimeM').value)||0));
-      _eTimeState[_eTimeTab]={ampm,h,m};
-      document.getElementById(_eTimeTab==='bed'?'editSleepStart':'editSleepEnd').value=_drumTo24h(ampm,h,m);
-      _updateETimeLabels();
-    }
-    function switchETimeTab(tab) {
-      _saveETimeState(); _eTimeTab=tab; _applyETimeState(_eTimeState[tab]);
-      const b=document.getElementById('eTabBed'),w=document.getElementById('eTabWake');
-      if(tab==='bed'){b.className='drum-tab-active flex-1 py-3 text-sm border-b-2 transition-all';w.className='drum-tab-inactive flex-1 py-3 text-sm border-b-2 transition-all';}
-      else           {w.className='drum-tab-active flex-1 py-3 text-sm border-b-2 transition-all';b.className='drum-tab-inactive flex-1 py-3 text-sm border-b-2 transition-all';}
-      _updateETimeLabels();
-    }
-    function toggleETimeAmPm() {
-      const b=document.getElementById('eTimeAmPm'); b.textContent=b.textContent==='오전'?'오후':'오전'; _saveETimeState();
-    }
-    function onETimeInput() { _saveETimeState(); }
-    function onETimeBlur(id,min,max) {
-      const el=document.getElementById(id); let v=parseInt(el.value);
-      if(isNaN(v)||v<min) v=min; if(v>max) v=max;
-      el.value=(id==='eTimeM')?String(v).padStart(2,'0'):v;
-      _saveETimeState();
-    }
-    // ────────────────────────────────────────────────────────
 
     // 수면 기록 저장
     function submitSleep() {
@@ -3027,32 +2872,11 @@
         body.innerHTML = `
           <div><label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-2">날짜</label>
           <input type="date" id="editDate" value="${log.date}" class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-400"></div>
-          <input type="hidden" id="editSleepStart">
-          <input type="hidden" id="editSleepEnd">
-          <div class="rounded-2xl border-2 border-gray-200 overflow-hidden">
-            <div class="flex">
-              <button id="eTabBed" onclick="switchETimeTab('bed')" class="drum-tab-active flex-1 py-3 text-sm border-b-2 transition-all">
-                🛏️ 취침&nbsp;<span id="eLabelBed" class="font-normal text-xs">--:--</span>
-              </button>
-              <button id="eTabWake" onclick="switchETimeTab('wake')" class="drum-tab-inactive flex-1 py-3 text-sm border-b-2 transition-all">
-                ⏰ 기상&nbsp;<span id="eLabelWake" class="font-normal text-xs">--:--</span>
-              </button>
-            </div>
-            <div class="flex items-center justify-center gap-3 py-8 bg-gray-50">
-              <button id="eTimeAmPm" onclick="toggleETimeAmPm()"
-                class="px-4 py-5 rounded-2xl bg-white border-2 border-indigo-200 text-indigo-700 font-bold text-xl min-w-[72px] shadow-sm active:bg-indigo-50 transition-colors">오후</button>
-              <div class="flex items-center gap-1 bg-white border-2 border-indigo-200 rounded-2xl px-3 py-3 shadow-sm">
-                <input id="eTimeH" type="number" min="1" max="12" inputmode="numeric"
-                  oninput="onETimeInput()" onblur="onETimeBlur('eTimeH',1,12)"
-                  class="time-input w-16 text-center text-4xl font-bold outline-none bg-transparent text-gray-800"
-                  placeholder="11">
-                <span class="text-4xl font-bold text-gray-300 px-1">:</span>
-                <input id="eTimeM" type="number" min="0" max="59" inputmode="numeric"
-                  oninput="onETimeInput()" onblur="onETimeBlur('eTimeM',0,59)"
-                  class="time-input w-16 text-center text-4xl font-bold outline-none bg-transparent text-gray-800"
-                  placeholder="00">
-              </div>
-            </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-2">취침</label>
+            <input type="time" id="editSleepStart" value="${log.start}" class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-400"></div>
+            <div><label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-2">기상</label>
+            <input type="time" id="editSleepEnd" value="${log.end}" class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-400"></div>
           </div>
           <div><label class="text-xs text-gray-400 font-bold uppercase tracking-wider block mb-2">상태</label>
           <div class="grid grid-cols-5 gap-2" id="editConditionContainer">
@@ -3066,7 +2890,6 @@
           <textarea id="editMemo" class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-indigo-400 resize-none" rows="3">${log.memo || ''}</textarea></div>
         `;
         window.editCondition = log.condition;
-        setTimeout(() => initEditTimePicker(log.start, log.end), 50);
       }
 
       // 카페인 수정 모달: 기존 이유 값 체크박스에 복원
@@ -3979,49 +3802,18 @@
       // 새 뱃지가 있으면 모달 + 토스트
       if (newOnes.length > 0) {
         _showTeacherBadgeModal(newOnes);
+        const icon = newOnes[0].image || '🏅';
         const txt = newOnes.length === 1
-          ? `🏅 선생님이 "${newOnes[0].name}" 뱃지를 주셨어요!`
-          : `🏅 선생님이 뱃지 ${newOnes.length}개를 주셨어요!`;
+          ? `${icon} "${newOnes[0].name}" 뱃지를 얻었습니다!`
+          : `🏅 뱃지 ${newOnes.length}개를 얻었습니다!`;
         showUpdateNotification(txt);
       }
     }
 
-    // ── 달력 탭 뱃지 섹션 렌더 ───────────────────────────
+    // ── 달력 탭 뱃지 섹션 렌더 (통합됨 → updateBadges로 위임) ───
     function _renderTeacherAwardSection() {
-      const section = document.getElementById('teacherAwardSection');
-      const list    = document.getElementById('teacherAwardList');
-      const countEl = document.getElementById('teacherAwardCountBadge');
-      if (!section || !list) return;
-
-      if (!teacherAwards.length) { section.classList.add('hidden'); return; }
-      section.classList.remove('hidden');
-      if (countEl) countEl.textContent = teacherAwards.length + '개';
-
-      const seenIds = getSeenTeacherAwardIds();
-      list.innerHTML = teacherAwards.map(a => {
-        const isNew  = !seenIds.includes(_awardKey(a));
-        const isUrl  = a.image && (a.image.startsWith('http') || a.image.startsWith('/'));
-        const imgEl  = isUrl
-          ? `<img src="${a.image}" class="_badge-img-popup" data-src="${a.image.replace(/"/g,'&quot;')}" data-name="${(a.name||'').replace(/"/g,'&quot;')}" style="width:32px;height:32px;object-fit:contain;border-radius:8px;flex-shrink:0;cursor:pointer;" onerror="this.style.display='none'">`
-          : `<span style="font-size:26px;flex-shrink:0;line-height:1;">${a.image||'🏅'}</span>`;
-        const newTag = isNew
-          ? `<span style="font-size:9px;background:#7c3aed;color:white;padding:1px 5px;border-radius:6px;font-weight:700;">NEW</span>` : '';
-        const msgEl  = a.message
-          ? `<p class="text-xs text-gray-500 mt-1 leading-relaxed italic">"${a.message}"</p>` : '';
-        const dateEl = a.grantedAt
-          ? `<p class="text-[10px] text-gray-300 mt-0.5">${String(a.grantedAt).substring(0,16)}</p>` : '';
-        return `<div class="flex items-center gap-3 p-3 rounded-2xl border-2 transition-all"
-            style="background:${a.bg||'#f5f3ff'};border-color:${a.color||'#7c3aed'}33;">
-          ${imgEl}
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 flex-wrap">
-              <span class="text-sm font-bold" style="color:${a.color||'#6d28d9'};">${a.name}</span>
-              ${newTag}
-            </div>
-            ${msgEl}${dateEl}
-          </div>
-        </div>`;
-      }).join('');
+      // 선생님 수여 뱃지는 challengeBadgeGrid에 통합 표시됨
+      updateBadges();
     }
 
     // ── nav 버블 업데이트 ──────────────────────────────
@@ -4053,12 +3845,20 @@
         }).join('');
       }
 
+      // 모달 제목: 단일 뱃지일 때 이름 표시
+      const titleEl = document.getElementById('tbModalTitle');
+      if (titleEl) {
+        titleEl.textContent = newAwards.length === 1
+          ? `🎉 "${newAwards[0].name}" 뱃지를 얻었습니다!`
+          : `🎉 뱃지 ${newAwards.length}개를 얻었습니다!`;
+      }
+
       // 목록: 각 뱃지 카드
       listEl.innerHTML = newAwards.map(a => {
         const isUrl = a.image && (a.image.startsWith('http') || a.image.startsWith('/'));
         const imgEl = isUrl
           ? `<img src="${a.image}" class="_badge-img-popup" data-src="${a.image.replace(/"/g,'&quot;')}" data-name="${(a.name||'').replace(/"/g,'&quot;')}" style="width:40px;height:40px;object-fit:contain;border-radius:10px;flex-shrink:0;cursor:pointer;" onerror="this.style.display='none'">`
-          : `<span style="font-size:32px;flex-shrink:0;line-height:1;">${a.image||'🏅'}</span>`;
+          : `<span style="font-size:32px;flex-shrink:0;line-height:1;filter:drop-shadow(0 2px 6px ${a.color||'#7c3aed'}66);">${a.image||'🏅'}</span>`;
         const msgEl = a.message
           ? `<p class="text-xs text-gray-500 mt-1 italic leading-relaxed">"${a.message}"</p>` : '';
         return `<div class="flex items-center gap-3 p-3 mb-2 rounded-2xl border-2"
@@ -4066,6 +3866,7 @@
           ${imgEl}
           <div class="flex-1 min-w-0">
             <p class="font-black text-sm" style="color:${a.color||'#6d28d9'};">${a.name}</p>
+            <p class="text-xs mt-0.5" style="color:${a.color||'#6d28d9'}88;">달성 완료! 수고했어요 🎊</p>
             ${msgEl}
           </div>
         </div>`;
@@ -4977,7 +4778,7 @@
       panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
-    // ── 뱃지 설정 서버에서 로드 ─────────────────────────────────
+    // ── 뱃지 설정 서버에서 로드 (v3: 챌린지 교사 승인 방식) ─────
     function loadBadgeConfig() {
       google.script.run
         .withSuccessHandler(function(result) {
@@ -4988,8 +4789,27 @@
         })
         .withFailureHandler(function(err) {
           console.warn('[뱃지설정] 로드 실패:', err);
+          // 실패 시 getBadgeConfig(v2)로 폴백
+          google.script.run
+            .withSuccessHandler(function(r2) {
+              if (r2 && r2.success && r2.config) {
+                // v2 → v3 형식으로 변환
+                const v2 = r2.config;
+                badgeConfig = {
+                  challengeName: v2.challengeName || '',
+                  challengeStart: '', challengeEnd: '',
+                  badges: (v2.badges || []).map(function(b) {
+                    return { id:b.id, name:b.name, image:b.emoji||'🏅', bg:b.bg||'#f5f3ff', color:b.color||'#7c3aed',
+                             type:'caffeine', method: b.type==='streak'?'consecutive':'cumulative', days:b.days||3 };
+                  })
+                };
+                updateBadges();
+              }
+            })
+            .withFailureHandler(function(){})
+            .getBadgeConfig();
         })
-        .getBadgeConfig();
+        .getChallengeBadgeConfig();
     }
 
     // 뱃지 업데이트 로직
@@ -5000,37 +4820,55 @@
       const hasTodayCaf   = getCaffeineLogsForDate(today).length > 0;
       const hasTodaySleep = !!getSleepLogForDate(today);
 
-      // 2) 기록일 Set 구성 (수면 OR 카페인 중 하나라도 있으면 기록 있음)
-      const recordedDates = new Set();
-      sleepLogs.forEach(log => { if (log.date) recordedDates.add(log.date); });
-      caffeineLogs.forEach(log => { const d = getLogDateKST(log.time); if (d) recordedDates.add(d); });
+      // 2) 카페인 / 수면 기록일 Set 구성 (별도)
+      const cafDates   = new Set();
+      const sleepDates = new Set();
+      caffeineLogs.forEach(function(log) { const d = getLogDateKST(log.time); if (d) cafDates.add(d); });
+      sleepLogs.forEach(function(log)    { if (log.date) sleepDates.add(log.date); });
 
-      // 3) 연속일 계산
-      function calcStreak() {
+      // 3) 유형별 연속일 계산
+      function _calcStreakFor(dateSet) {
         let streak = 0;
         const cur = new Date(today + 'T00:00:00');
-        if (!recordedDates.has(today)) cur.setDate(cur.getDate() - 1);
+        if (!dateSet.has(today)) cur.setDate(cur.getDate() - 1);
         while (true) {
           const ds = cur.toISOString().split('T')[0];
-          if (recordedDates.has(ds)) { streak++; cur.setDate(cur.getDate() - 1); } else break;
+          if (dateSet.has(ds)) { streak++; cur.setDate(cur.getDate() - 1); } else break;
         }
         return streak;
       }
-      function calcGapDays() {
-        if (recordedDates.has(today)) return 0;
+      function _calcGapFor(dateSet) {
+        if (dateSet.has(today)) return 0;
         let gap = 0;
         const cur = new Date(today + 'T00:00:00');
         cur.setDate(cur.getDate() - 1);
         for (let i = 0; i < 30; i++) {
           const ds = cur.toISOString().split('T')[0];
-          if (recordedDates.has(ds)) break;
+          if (dateSet.has(ds)) break;
           gap++; cur.setDate(cur.getDate() - 1);
         }
         return gap;
       }
-      const currentStreak = calcStreak();
-      const gapDays       = calcGapDays();
-      const totalCount    = recordedDates.size; // 전체 누적 기록일 수
+      // 챌린지 기간 내 누적 기록일 계산
+      function _calcCumulative(type, startDate, endDate) {
+        if (!startDate || !endDate) return 0;
+        let count = 0;
+        const cur = new Date(startDate + 'T00:00:00');
+        const end = new Date(endDate   + 'T00:00:00');
+        while (cur <= end) {
+          const ds = cur.toISOString().split('T')[0];
+          let has = false;
+          if (type === 'caffeine' || type === 'both') has = has || cafDates.has(ds);
+          if (type === 'sleep'    || type === 'both') has = has || sleepDates.has(ds);
+          if (has) count++;
+          cur.setDate(cur.getDate() + 1);
+        }
+        return count;
+      }
+
+      const cafStreak   = _calcStreakFor(cafDates);
+      const sleepStreak = _calcStreakFor(sleepDates);
+      const cafGap      = _calcGapFor(cafDates);
 
       // 4) 오늘의 실천 뱃지 (고정)
       function _setActive(id, iconId, labelId, labelHTML, bgClass, txtClass) {
@@ -5059,7 +4897,7 @@
       if (hasTodaySleep) _setActive('badge-daily-sleep','badge-daily-sleep-icon','badge-daily-sleep-label','수면<br>오늘 기록','bg-blue-100','text-blue-700');
       else               _setInactive('badge-daily-sleep','badge-daily-sleep-icon','badge-daily-sleep-label','수면<br>오늘 기록');
 
-      // 5) 챌린지 뱃지 동적 렌더
+      // 5) 챌린지 뱃지 동적 렌더 (v3: 교사 승인 기반 / 카페인 좌열·수면 우열)
       const grid = document.getElementById('challengeBadgeGrid');
       if (grid) {
         const cfg = badgeConfig;
@@ -5068,79 +4906,124 @@
         const nameEl = document.getElementById('badge-challenge-name');
         if (nameEl) nameEl.textContent = (cfg && cfg.challengeName) ? '[ ' + cfg.challengeName + ' ]' : '';
 
+        // 교사 수여 여부 판정 — ID 또는 이름으로 매칭
+        function _isBadgeEarned(badge) {
+          return teacherAwards.some(function(a) {
+            return (a.awardId === badge.id) || (a.badgeId === badge.id) ||
+                   (a.name && badge.name && a.name.trim() === badge.name.trim());
+          });
+        }
+
+        // 뱃지 카드 DOM 생성
+        function _makeBadgeCard(badge) {
+          const goal    = badge.days || 1;
+          const icon    = badge.image || badge.emoji || '🏅';
+          const isCumul = (badge.method === 'cumulative' || badge.type === 'count');
+          const isEarned = _isBadgeEarned(badge);
+
+          let currentVal = 0;
+          if (!isEarned) {
+            if (isCumul) {
+              currentVal = _calcCumulative(badge.type || 'caffeine', cfg.challengeStart, cfg.challengeEnd);
+            } else {
+              const bType = badge.type || 'caffeine';
+              if      (bType === 'caffeine') currentVal = cafStreak;
+              else if (bType === 'sleep')    currentVal = sleepStreak;
+              else                           currentVal = Math.min(cafStreak, sleepStreak);
+            }
+          }
+
+          const diff = goal - currentVal;
+          const div = document.createElement('div');
+          div.className = 'flex items-center gap-3 p-3 rounded-2xl transition-all duration-500';
+
+          if (isEarned) {
+            div.style.cssText = `background:${badge.bg||'#ecfdf5'};box-shadow:0 2px 10px ${badge.color||'#059669'}28;`;
+            div.innerHTML = `
+              <span class="text-3xl flex-shrink-0" style="filter:drop-shadow(0 2px 4px ${badge.color||'#059669'}55);">${icon}</span>
+              <div class="min-w-0">
+                <p class="text-xs font-bold leading-tight" style="color:${badge.color||'#059669'};">${badge.name}</p>
+                <p class="text-[10px] mt-0.5 font-semibold" style="color:${badge.color||'#059669'}88;">달성 완료 🎉</p>
+              </div>`;
+          } else if (diff <= 2 && diff > 0) {
+            const unitStr = isCumul ? '일' : '일 연속';
+            div.style.cssText = 'background:#f3f4f6;border:1.5px dashed #6ee7b7;';
+            div.innerHTML = `
+              <span class="text-3xl flex-shrink-0 grayscale opacity-50">${icon}</span>
+              <div class="min-w-0">
+                <p class="text-xs font-bold text-gray-500 leading-tight">${badge.name}</p>
+                <p class="text-[10px] mt-0.5 font-semibold text-emerald-600">${diff}${unitStr} 더! 거의 다 왔어요 💪</p>
+              </div>`;
+          } else {
+            const typeLabel = isCumul ? `누적 ${currentVal}/${goal}일` : `연속 ${currentVal}/${goal}일`;
+            div.style.cssText = 'background:#f3f4f6;';
+            div.innerHTML = `
+              <span class="text-3xl flex-shrink-0 grayscale opacity-40">${icon}</span>
+              <div class="min-w-0">
+                <p class="text-xs font-bold text-gray-400 leading-tight">${badge.name}</p>
+                <p class="text-[10px] text-gray-400 mt-0.5">${typeLabel}</p>
+              </div>`;
+          }
+          return { div, isEarned, diff, currentVal, isCumul, icon, badge };
+        }
+
         if (!cfg || !cfg.badges || cfg.badges.length === 0) {
-          // 서버 설정 없음 — 기본 안내
-          grid.innerHTML = '<p class="col-span-2 text-xs text-gray-400 text-center py-2">교사가 챌린지를 설정하면 여기에 뱃지가 나타나요!</p>';
+          grid.innerHTML = '<p class="col-span-2 text-xs text-gray-400 text-center py-4">교사가 챌린지를 설정하면<br>여기에 뱃지 슬롯이 나타나요!</p>';
         } else {
           grid.innerHTML = '';
-          let nextTarget = null; // 가장 가까운 미달성 뱃지
+
+          // ── 카페인(좌) / 수면(우) / 둘다(좌) 로 분리 ──
+          const cafCol   = document.createElement('div');
+          cafCol.className = 'flex flex-col gap-2';
+          const sleepCol = document.createElement('div');
+          sleepCol.className = 'flex flex-col gap-2';
+
+          // 열 헤더
+          const cafHdr = document.createElement('p');
+          cafHdr.className = 'text-[11px] font-bold text-orange-500 pb-1 tracking-wide';
+          cafHdr.textContent = '☕ 카페인 목표';
+          cafCol.appendChild(cafHdr);
+
+          const sleepHdr = document.createElement('p');
+          sleepHdr.className = 'text-[11px] font-bold text-indigo-500 pb-1 tracking-wide';
+          sleepHdr.textContent = '😴 수면 목표';
+          sleepCol.appendChild(sleepHdr);
+
+          let nextTarget = null;
 
           cfg.badges.forEach(function(badge) {
-            const val    = badge.type === 'streak' ? currentStreak : totalCount;
-            const goal   = badge.days || 1;
-            const earned = val >= goal;
-            const diff   = goal - val;
-            if (!earned && !nextTarget) nextTarget = { badge, val, diff };
-
-            const div = document.createElement('div');
-            div.className = 'flex items-center gap-3 p-3 rounded-2xl transition-all duration-500';
-
-            if (earned) {
-              // ✅ 달성
-              div.style.cssText = `background:${badge.bg || '#ecfdf5'};`;
-              div.innerHTML = `
-                <span class="text-3xl flex-shrink-0">${badge.emoji || '🏅'}</span>
-                <div class="min-w-0">
-                  <p class="text-xs font-bold leading-tight" style="color:${badge.color || '#059669'};">${badge.name}</p>
-                  <p class="text-[10px] mt-0.5 font-semibold" style="color:${badge.color || '#059669'};">
-                    ${badge.type === 'streak' ? goal + '일 연속 달성! 🎉' : goal + '번 기록 달성! 🎉'}
-                  </p>
-                </div>`;
-            } else if (diff <= 2 && diff > 0) {
-              // 🔥 거의 달성 — 강조
-              div.style.cssText = 'background:#fffbeb;border:1.5px solid #fbbf24;';
-              div.innerHTML = `
-                <span class="text-3xl flex-shrink-0" style="opacity:0.8;">${badge.emoji || '🏅'}</span>
-                <div class="min-w-0">
-                  <p class="text-xs font-bold leading-tight text-yellow-700">${badge.name}</p>
-                  <p class="text-[10px] mt-0.5 text-yellow-600 font-semibold">
-                    ${diff}${badge.type === 'streak' ? '일' : '번'} 더! 거의 다 왔어요! 💪
-                  </p>
-                </div>`;
-            } else {
-              // ⬜ 미달성
-              const typeLabel = badge.type === 'streak'
-                ? `연속 ${val}/${goal}일`
-                : `누적 ${val}/${goal}번`;
-              div.style.cssText = 'background:#f3f4f6;';
-              div.innerHTML = `
-                <span class="text-3xl flex-shrink-0 grayscale opacity-40">${badge.emoji || '🏅'}</span>
-                <div class="min-w-0">
-                  <p class="text-xs font-bold text-gray-400 leading-tight">${badge.name}</p>
-                  <p class="text-[10px] text-gray-400 mt-0.5">${typeLabel}</p>
-                </div>`;
+            const result = _makeBadgeCard(badge);
+            if (!result.isEarned && !nextTarget) {
+              nextTarget = { badge: result.badge, icon: result.icon, currentVal: result.currentVal, diff: result.diff, isCumul: result.isCumul };
             }
-            grid.appendChild(div);
+            const bType = badge.type || 'caffeine';
+            if (bType === 'sleep') sleepCol.appendChild(result.div);
+            else                   cafCol.appendChild(result.div);   // caffeine / both → 좌열
           });
+
+          grid.appendChild(cafCol);
+          grid.appendChild(sleepCol);
 
           // 6) 경고 / 응원 메시지
           const msgEl = document.getElementById('badge-challenge-msg');
           if (msgEl) {
-            // 연속 뱃지가 하나라도 있는지 확인
-            const hasStreakBadge = cfg.badges.some(b => b.type === 'streak');
-            if (hasStreakBadge && gapDays >= 2) {
-              const color = gapDays >= 3 ? 'red' : 'orange';
-              const txt = gapDays >= 3
-                ? `<b>${gapDays}일째 기록 없음</b> — 연속 기록이 끊겼어요 😢<br>연속 뱃지는 <b>하루라도 빠지면 처음부터 다시!</b> 오늘 기록하고 재도전해요.`
+            const hasUnearned     = cfg.badges.some(function(b){ return !_isBadgeEarned(b); });
+            const hasConsecUnearned = cfg.badges.some(function(b){
+              return (b.method==='consecutive'||b.type==='streak') && !_isBadgeEarned(b);
+            });
+            if (hasConsecUnearned && cafGap >= 2) {
+              const color = cafGap >= 3 ? 'red' : 'orange';
+              const txt = cafGap >= 3
+                ? `<b>${cafGap}일째 기록 없음</b> — 연속 기록이 끊겼어요 😢<br>연속 뱃지는 <b>하루라도 빠지면 처음부터 다시!</b> 오늘 기록하고 재도전해요.`
                 : `<b>이틀째 기록 없음</b> — 오늘 기록 안 하면 연속이 끊겨요! 지금 바로 기록하세요 🔥`;
               msgEl.className = `mt-3 p-3 bg-${color}-50 border border-${color}-200 rounded-xl flex items-start gap-2`;
               msgEl.innerHTML = `<span>⚠️</span><p class="text-xs text-${color}-600 leading-relaxed">${txt}</p>`;
               msgEl.classList.remove('hidden');
-            } else if (nextTarget && nextTarget.diff <= 2) {
+            } else if (nextTarget && nextTarget.diff <= 2 && hasUnearned) {
               const t = nextTarget;
-              const typeStr = t.badge.type === 'streak' ? `연속 ${t.diff}일` : `${t.diff}번`;
-              msgEl.className = 'mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-xl flex items-start gap-2';
-              msgEl.innerHTML = `<span>💪</span><p class="text-xs text-yellow-700 leading-relaxed"><b>${typeStr}만 더!</b> 지금 기록하면 ${t.badge.emoji} <b>${t.badge.name}</b> 뱃지를 받을 수 있어요!</p>`;
+              const typeStr = t.isCumul ? `${t.diff}일` : `연속 ${t.diff}일`;
+              msgEl.className = 'mt-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2';
+              msgEl.innerHTML = `<span>💪</span><p class="text-xs text-emerald-700 leading-relaxed"><b>${typeStr}만 더!</b> 조건 달성 시 ${t.icon} <b>${t.badge.name}</b> 뱃지를 받을 수 있어요!</p>`;
               msgEl.classList.remove('hidden');
             } else {
               msgEl.classList.add('hidden');
@@ -5157,35 +5040,17 @@
               infoEl.textContent = '오늘 아직: ' + todayParts.join(', ') + ' 남았어요';
             } else if (nextTarget) {
               const t = nextTarget;
-              const typeStr = t.badge.type === 'streak'
-                ? `연속 ${t.val}일 / ${t.badge.days}일`
-                : `누적 ${t.val}번 / ${t.badge.days}번`;
-              infoEl.textContent = `${typeStr} — ${t.badge.emoji} ${t.badge.name} 뱃지 도전 중!`;
+              const typeStr = t.isCumul
+                ? `누적 ${t.currentVal}일 / ${t.badge.days}일`
+                : `연속 ${t.currentVal}일 / ${t.badge.days}일`;
+              infoEl.textContent = `${typeStr} — ${t.icon} ${t.badge.name} 도전 중!`;
             } else {
-              infoEl.textContent = '모든 챌린지 뱃지 달성! 정말 대단해요 💪';
+              infoEl.textContent = '🎉 모든 챌린지 뱃지를 받았어요! 정말 대단해요!';
             }
           }
         }
       }
     }
-
-// ── 선생님 뱃지 목록 토글 ────────────────────────────────────
-let _teacherAwardListOpen = true;
-function toggleTeacherAwardList() {
-    const list = document.getElementById('teacherAwardList');
-    const chevron = document.getElementById('teacherAwardChevron');
-    if (!list) return;
-    _teacherAwardListOpen = !_teacherAwardListOpen;
-    if (_teacherAwardListOpen) {
-        list.style.maxHeight = '1000px';
-        list.style.opacity = '1';
-        if (chevron) chevron.style.transform = 'rotate(0deg)';
-    } else {
-        list.style.maxHeight = '0px';
-        list.style.opacity = '0';
-        if (chevron) chevron.style.transform = 'rotate(180deg)';
-    }
-}
 
 // ── 뱃지 이미지 팝업 ──────────────────────────────────────
 function _openImgPopup(src, name) {
