@@ -2394,6 +2394,7 @@ window.onclick=e=>{if(e.target===document.getElementById('studentModal'))closeMo
 function setModalDateToday(){document.getElementById('modalEndDate').value=today;refreshModalData();}
 
 function refreshModalData(){
+    const endDate=document.getElementById('modalEndDate').value||today;
     const dates=getModalDates();
     const rl=getPeriodLabel(dates);
     document.getElementById('modalDateRangeLabel').textContent=`📅 ${rl}`;
