@@ -4544,6 +4544,10 @@ function detectPendingBadges(){
         list.forEach(a=>{const bid=a.badgeId||a.awardId;if(bid)awarded.add(sid+'|'+bid);});
     });
     const dismissed=new Set(dismissedBadges.map(d=>d.studentId+'|'+d.badgeId));
+    // 이미 수여/보류된 항목을 pendingBadges에서 정리
+    const before=pendingBadges.length;
+    pendingBadges=pendingBadges.filter(p=>{const key=p.studentId+'|'+p.badgeId;return !awarded.has(key)&&!dismissed.has(key);});
+    if(pendingBadges.length!==before)savePendingBadges();
     const newPending=[];
     studentsData.forEach(s=>{
         challengeBadges.forEach(badge=>{
@@ -4600,6 +4604,10 @@ function renderPendingBadges(){
         const groupCnt=key=>{ const g=BADGE_GROUPS.find(x=>x.key===key); return g?pendingBadges.filter(p=>g.ids.includes(p.badgeId)).length:0; };
         const badgeCnt=id=>pendingBadges.filter(p=>p.badgeId===id).length;
 
+        // 커스텀 뱃지 (BADGE_GROUPS에 없는 challengeBadges)
+        const defaultIds=BADGE_GROUPS.flatMap(g=>g.ids);
+        const customBadgesInPending=challengeBadges.filter(b=>!defaultIds.includes(b.id)&&badgeCnt(b.id)>0);
+
         // ① 드롭다운 select (optgroup 계층)
         let selectOpts=`<option value="">전체 (${pendingBadges.length}명)</option>`;
         BADGE_GROUPS.forEach(grp=>{
@@ -4615,6 +4623,14 @@ function renderPendingBadges(){
             });
             selectOpts+=`</optgroup>`;
         });
+        if(customBadgesInPending.length){
+            selectOpts+=`<optgroup label="🌟 커스텀 뱃지">`;
+            customBadgesInPending.forEach(b=>{
+                const sc=badgeCnt(b.id);
+                selectOpts+=`<option value="${b.id}" ${pendingBadgeFilter===b.id?'selected':''}>　${b.image||'🌟'} ${b.name} (${sc}명)</option>`;
+            });
+            selectOpts+=`</optgroup>`;
+        }
 
         // ② 1단계 그룹 버튼
         const allActive=pendingBadgeFilter===null;
@@ -4625,6 +4641,12 @@ function renderPendingBadges(){
             const gKey=`group:${grp.key}`;
             const isGrpActive=pendingBadgeFilter===gKey||grp.subs.some(s=>pendingBadgeFilter===s.id);
             row1+=`<button onclick="setPendingFilter('${gKey}')" style="${btnBase(isGrpActive,'#f59e0b')}">${grp.emoji} ${grp.label} ${cntPill(isGrpActive,gc)}</button>`;
+        });
+        // 커스텀 뱃지 개별 필터 버튼
+        customBadgesInPending.forEach(b=>{
+            const sc=badgeCnt(b.id);
+            const isActive=pendingBadgeFilter===b.id;
+            row1+=`<button onclick="setPendingFilter('${b.id}')" style="${btnBase(isActive,'#7c3aed')}">${b.image||'🌟'} ${b.name} ${cntPill(isActive,sc)}</button>`;
         });
 
         // ③ 2단계 서브 버튼 (현재 선택된 그룹 내부만 표시)
