@@ -74,9 +74,11 @@
         .analysis-dropdown-btn.has-selection-caf{border-color:#ef4444;background:#fef2f2;color:#dc2626;}
         .analysis-dropdown-btn.has-selection-sleep{border-color:#8b5cf6;background:#f5f3ff;color:#7c3aed;}
         .analysis-dropdown-btn.has-selection-award{border-color:#7c3aed;background:#f5f3ff;color:#6d28d9;}
+        .analysis-dropdown-btn.has-selection-record{border-color:#10b981;background:#ecfdf5;color:#059669;}
         .analysis-dropdown-btn .adrop-badge{background:rgba(0,0,0,0.1);padding:1px 7px;border-radius:10px;font-size:11px;font-weight:700;}
         .analysis-dropdown-btn.has-selection-caf .adrop-badge{background:rgba(220,38,38,0.18);}
         .analysis-dropdown-btn.has-selection-sleep .adrop-badge{background:rgba(124,58,237,0.18);}
+        .analysis-dropdown-btn.has-selection-record .adrop-badge{background:rgba(5,150,105,0.18);}
         .analysis-dropdown-menu{display:none;position:absolute;top:calc(100% + 6px);left:0;background:white;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,0.14);border:1px solid #e5e7eb;z-index:300;min-width:230px;overflow:hidden;padding:8px 0;}
         .analysis-dropdown-menu.open{display:block;}
         .adrop-header{padding:8px 16px 6px;font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:.05em;}
@@ -688,8 +690,30 @@
             </div>
             <div class="filter-buttons" style="align-items:center;">
                 <button class="filter-btn active" id="filterAll" onclick="clearAllFilters()">전체 보기 <span class="badge" id="badgeAll">0</span></button>
-                <button class="filter-btn" id="filterRecorded" onclick="toggleSingleFilter('recorded')">오늘 기록 <span class="badge" id="badgeRecorded">0</span></button>
-                <button class="filter-btn" id="filterNotRecorded" onclick="toggleSingleFilter('notRecorded')">오늘 미기록 <span class="badge" id="badgeNotRecorded">0</span></button>
+
+                <!-- 📋 오늘 기록 현황 드롭다운 -->
+                <div class="analysis-dropdown-wrap" id="recordDropWrap">
+                    <button class="analysis-dropdown-btn" id="recordDropBtn" onclick="toggleAnalysisDrop('recordDrop')">
+                        📋 오늘 기록 현황 <span class="adrop-badge" id="recordSelBadge" style="display:none;">0</span> <span style="font-size:10px;">▼</span>
+                    </button>
+                    <div class="analysis-dropdown-menu" id="recordDrop">
+                        <div class="adrop-header">오늘 기록 현황</div>
+                        <div class="adrop-item" onclick="toggleRecordItem('recorded')">
+                            <input type="checkbox" id="chk_recorded">
+                            <span class="adrop-dot" style="background:#10b981;"></span>✅ 오늘 기록
+                            <span class="adrop-cnt" id="cntRecorded">0</span>
+                        </div>
+                        <div class="adrop-item" onclick="toggleRecordItem('notRecorded')">
+                            <input type="checkbox" id="chk_notRecorded">
+                            <span class="adrop-dot" style="background:#ef4444;"></span>❌ 오늘 미기록
+                            <span class="adrop-cnt" id="cntNotRecorded">0</span>
+                        </div>
+                        <div class="adrop-divider"></div>
+                        <div class="adrop-footer">
+                            <button class="adrop-footer-btn adrop-clear" onclick="clearRecord(event)">초기화</button>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- ☕ 카페인 분석 드롭다운 -->
                 <div class="analysis-dropdown-wrap" id="cafDropWrap">
@@ -739,16 +763,13 @@
                         🏅 뱃지 분석 <span class="adrop-badge" id="awardSelBadge" style="display:none;">0</span> <span style="font-size:10px;">▼</span>
                     </button>
                     <div class="analysis-dropdown-menu" id="awardDrop">
-                        <div class="adrop-header">자동 뱃지 목록</div>
-                        <div class="adrop-item" onclick="toggleAwardItem('auto_habit_start')"><input type="checkbox" id="chk_auto_habit_start"><span class="adrop-dot" style="background:#059669;"></span>🌱 습관의 시작<span class="adrop-cnt" id="cntAuto_habit_start">0</span></div>
-                        <div class="adrop-item" onclick="toggleAwardItem('auto_streak_record')"><input type="checkbox" id="chk_auto_streak_record"><span class="adrop-dot" style="background:#d97706;"></span>🏆 꾸준한 기록<span class="adrop-cnt" id="cntAuto_streak_record">0</span></div>
-                        <div class="adrop-item" onclick="toggleAwardItem('auto_caf_safe')"><input type="checkbox" id="chk_auto_caf_safe"><span class="adrop-dot" style="background:#059669;"></span>☕ 카페인 안전<span class="adrop-cnt" id="cntAuto_caf_safe">0</span></div>
-                        <div class="adrop-item" onclick="toggleAwardItem('auto_sleep_good')"><input type="checkbox" id="chk_auto_sleep_good"><span class="adrop-dot" style="background:#2563eb;"></span>😴 수면 적정<span class="adrop-cnt" id="cntAuto_sleep_good">0</span></div>
-                        <div class="adrop-item" onclick="toggleAwardItem('auto_none')"><input type="checkbox" id="chk_auto_none"><span class="adrop-dot" style="background:#d1d5db;"></span>🚫 뱃지 없음<span class="adrop-cnt" id="cntAuto_none">0</span></div>
+                        <div class="adrop-header">오늘 기록 뱃지 (자동)</div>
+                        <div class="adrop-item" onclick="toggleAwardItem('auto_today_caf')"><input type="checkbox" id="chk_auto_today_caf"><span class="adrop-dot" style="background:#059669;"></span>☕ 카페인 오늘 기록<span class="adrop-cnt" id="cntAuto_today_caf">0</span></div>
+                        <div class="adrop-item" onclick="toggleAwardItem('auto_today_sleep')"><input type="checkbox" id="chk_auto_today_sleep"><span class="adrop-dot" style="background:#2563eb;"></span>😴 수면 오늘 기록<span class="adrop-cnt" id="cntAuto_today_sleep">0</span></div>
                         <div class="adrop-divider"></div>
                         <div class="adrop-header">교사 수여 뱃지</div>
-                        <div class="adrop-item" onclick="toggleAwardItem('awardTeacher')"><input type="checkbox" id="chk_awardTeacher"><span class="adrop-dot" style="background:#6366f1;"></span>교사 수여 있음<span class="adrop-cnt" id="cntAwardTeacher">0</span></div>
-                        <div class="adrop-item" onclick="toggleAwardItem('awardNoTeacher')"><input type="checkbox" id="chk_awardNoTeacher"><span class="adrop-dot" style="background:#e5e7eb;"></span>교사 수여 없음<span class="adrop-cnt" id="cntAwardNoTeacher">0</span></div>
+                        <div class="adrop-item" onclick="toggleAwardItem('awardTeacher')"><input type="checkbox" id="chk_awardTeacher"><span class="adrop-dot" style="background:#6366f1;"></span>🏅 수여 있음<span class="adrop-cnt" id="cntAwardTeacher">0</span></div>
+                        <div class="adrop-item" onclick="toggleAwardItem('awardNoTeacher')"><input type="checkbox" id="chk_awardNoTeacher"><span class="adrop-dot" style="background:#e5e7eb;"></span>수여 없음<span class="adrop-cnt" id="cntAwardNoTeacher">0</span></div>
                         <div class="adrop-divider"></div>
                         <div class="adrop-footer">
                             <button class="adrop-footer-btn adrop-select-all" onclick="selectAllAward(event)">전체 선택</button>
@@ -771,6 +792,23 @@
     <!-- 📩 학생 문의 탭 -->
     <!-- ══ 🏅 뱃지 현황 탭 ══ -->
     <div id="tab-awards" class="tab-content">
+
+        <!-- 🔔 승인 대기 섹션 -->
+        <div id="pendingBadgesSection" style="display:none;background:white;border-radius:16px;padding:20px 24px;margin-bottom:24px;box-shadow:0 2px 12px rgba(0,0,0,0.08);border-left:4px solid #f59e0b;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+                <span style="font-size:22px;">🔔</span>
+                <h3 style="font-size:17px;font-weight:700;color:#1f2937;">승인 대기 <span id="pendingCount" style="background:#f59e0b;color:white;padding:2px 12px;border-radius:12px;font-size:14px;font-weight:700;">0</span></h3>
+                <span style="font-size:12px;color:#6b7280;margin-left:4px;">뱃지 달성 학생 목록 — 기록을 확인하고 수여 또는 보류하세요</span>
+            </div>
+            <div id="pendingBadgeFilter"></div>
+            <div id="pendingBulkBar" style="display:none;"></div>
+            <div id="pendingBadgeList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+            <details style="margin-top:8px;">
+                <summary style="cursor:pointer;font-size:13px;font-weight:600;color:#6b7280;padding:4px 0;user-select:none;">⏸ 보류된 항목 보기</summary>
+                <div id="dismissedBadgeList" style="margin-top:8px;display:flex;flex-direction:column;gap:6px;"></div>
+            </details>
+        </div>
+
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
             <div>
                 <h2 style="font-size:20px;font-weight:700;color:#1f2937;margin-bottom:4px;">🏅 교사 수여 뱃지 현황</h2>
@@ -1004,49 +1042,54 @@
                     데이터가 충분하지 않으면 부정확한 분석이 나올 수 있어 최소 기록일을 설정합니다.
                 </div>
             </div>
-            <!-- 🏅 뱃지 관리 카드 (grid-column 전체 span) -->
+            <!-- 🏅 뱃지 관리 카드 -->
             <div class="settings-card" style="grid-column:1/-1;">
-                <div class="settings-card-title">🏅 학생 뱃지 관리
-                    <span style="font-size:12px;font-weight:400;color:#9ca3af;margin-left:8px;">학생 카드 및 상세 모달에 표시될 뱃지를 설정합니다</span>
+                <div class="settings-card-title">🏅 학생 뱃지 달성 기준 (교사 설정)
+                    <span style="font-size:12px;font-weight:400;color:#9ca3af;margin-left:8px;">챌린지 뱃지는 교사 승인 후 학생에게 수여됩니다</span>
                 </div>
                 <div class="settings-info-box" style="margin-bottom:16px;">
-                    🏅 <strong>뱃지 자동 부여 조건</strong> (조회 7일 기간 기준):<br>
-                    <strong>habit_start</strong> — 기준일 포함 3일 연속 기록 있음 &nbsp;|&nbsp;
-                    <strong>streak_record</strong> — 7일 중 기록일 ≥ 설정일수 &nbsp;|&nbsp;
-                    <strong>caf_safe</strong> — 7일 평균 카페인 56% 미만 &nbsp;|&nbsp;
-                    <strong>sleep_good</strong> — 7일 평균 수면 적정 범위<br>
-                    이미지 칸에 이모지(예: 🏆) 또는 외부 이미지 URL을 입력하세요.
+                    ☕ <strong>카페인/수면 오늘 기록 뱃지</strong>는 자동 부여 유지 &nbsp;|&nbsp;
+                    나머지 <strong>습관·챌린지 뱃지</strong>는 시스템이 달성 감지 → <strong>교사가 뱃지 현황 탭에서 승인</strong> 후 수여됩니다.
                 </div>
-                <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;padding:12px 16px;background:#eef2ff;border-radius:10px;border:1px solid #c7d2fe;">
-                    <label style="font-size:13px;font-weight:600;color:#374151;white-space:nowrap;">📅 꾸준한 기록 뱃지 기준:</label>
-                    <input type="number" id="setting_awardMinDays" class="settings-input" min="1" max="7" step="1" value="5" style="width:70px;">
-                    <span class="settings-unit">일 이상 / 7일 기록 시 부여</span>
-                </div>
-                <!-- 학생용 자동 뱃지 설정 v2 (연속/누적 타입) -->
-                <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px 16px;margin-bottom:8px;">
-                    <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:4px;">🏅 학생용 자동 뱃지 달성 기준 (교사 설정)</div>
-                    <div style="font-size:11px;color:#6b7280;margin-bottom:12px;">
-                        🔁 <b>연속</b>: 하루도 빠짐없이 N일 연속 기록해야 달성 &nbsp;|&nbsp; 📊 <b>누적</b>: 연속 아니어도 총 N번 기록하면 달성
-                    </div>
-                    <!-- 챌린지 이름 -->
-                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+
+                <!-- 챌린지 설정 -->
+                <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px 16px;margin-bottom:16px;">
+                    <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:10px;">🏆 챌린지 설정</div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
                         <label style="font-size:12px;font-weight:600;color:#374151;white-space:nowrap;">챌린지 이름:</label>
-                        <input type="text" id="setting_challengeName" placeholder="예: 10일 챌린지" value="건강 챌린지"
-                            style="flex:1;max-width:200px;padding:5px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:600;">
+                        <input type="text" id="setting_challengeName" placeholder="예: 10일 건강 챌린지" value="10일 건강 챌린지"
+                            style="flex:1;max-width:220px;padding:6px 10px;border:1.5px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:600;">
                     </div>
-                    <!-- 뱃지 목록 (동적) -->
-                    <div id="badgeConfigRows" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
-                    <!-- 추가 버튼 -->
-                    <button onclick="addBadgeConfigRow()" style="padding:5px 14px;background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:12px;">+ 뱃지 추가</button>
-                    <!-- 저장 -->
-                    <div style="display:flex;align-items:center;gap:8px;">
-                        <button onclick="saveBadgeConfigToGAS()" style="padding:7px 18px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">☁️ 서버에 저장</button>
-                        <span id="badgeThresholdSaveStatus" style="font-size:12px;color:#6b7280;"></span>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                        <label style="font-size:12px;font-weight:600;color:#374151;white-space:nowrap;">챌린지 기간:</label>
+                        <input type="date" id="setting_challengeStart" style="padding:6px 10px;border:1.5px solid #d1d5db;border-radius:6px;font-size:13px;">
+                        <span style="color:#6b7280;">~</span>
+                        <input type="date" id="setting_challengeEnd" style="padding:6px 10px;border:1.5px solid #d1d5db;border-radius:6px;font-size:13px;">
+                        <span style="font-size:11px;color:#6b7280;">( 📊 누적형 뱃지에 적용 )</span>
                     </div>
-                    <div style="margin-top:8px;font-size:11px;color:#6b7280;">💡 저장하면 학생 앱 재로그인 시 새 기준이 적용됩니다.</div>
                 </div>
-                <div id="awardSettingList" style="margin-bottom:12px;"></div>
-                <button class="award-add-btn" onclick="addAwardItem()">+ 뱃지 항목 추가</button>
+
+                <!-- 뱃지 목록 -->
+                <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:12px;padding:0 4px;">
+                    🔁 <span style="color:#166534;">연속</span>: N일 하루도 빠짐없이 연속 기록 &nbsp;|&nbsp; 📊 <span style="color:#1e40af;">누적</span>: 챌린지 기간 내 N일 이상 기록
+                    &nbsp;|&nbsp; 이모지·이름·일수를 직접 수정할 수 있습니다.
+                </div>
+                <div id="challengeBadgeList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:12px;"></div>
+                <button onclick="addChallengeBadge()" style="padding:6px 16px;background:#e0f2fe;color:#0369a1;border:1.5px solid #7dd3fc;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;margin-bottom:14px;">+ 커스텀 뱃지 추가</button>
+
+                <!-- 저장 -->
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <button onclick="saveChallengeBadgeSettings()" style="padding:8px 20px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">💾 뱃지 설정 저장</button>
+                    <span id="challengeSaveStatus" style="font-size:12px;color:#6b7280;"></span>
+                </div>
+                <div style="margin-top:8px;font-size:11px;color:#6b7280;">💡 저장 후 학생 목록 탭으로 이동하면 달성한 학생이 뱃지 현황 탭 "승인 대기"에 표시됩니다.</div>
+
+                <!-- 교사 수여 팔레트 뱃지 설정 (수동 수여용) -->
+                <div style="margin-top:20px;border-top:1px solid #e5e7eb;padding-top:16px;">
+                    <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:8px;">🎨 교사 직접 수여 뱃지 팔레트 <span style="font-size:11px;font-weight:400;color:#9ca3af;">— 학생에게 직접 수여할 때 선택할 뱃지 목록</span></div>
+                    <div id="awardSettingList" style="margin-bottom:12px;"></div>
+                    <button class="award-add-btn" onclick="addAwardItem()">+ 뱃지 항목 추가</button>
+                </div>
             </div>
         </div>
         <!-- 하단 설정 저장 버튼 -->
@@ -1229,7 +1272,8 @@ let S={cafMaxFixed:0,cafWarn:56,cafOver:100,
        sleepSevere:6,sleepWarn:8,sleepGood:10,
        aiMinCaf:3,aiMinSleep:3,awardMinDays:5,
        badgeHabitDays:3,badgeStreakDays:7,badgeMonthlyDays:10,
-       badgeHabitName:'습관의 시작',badgeStreakName:'꾸준한 습관',badgeMonthlyName:'챌린지 달성'};
+       badgeHabitName:'습관의 시작',badgeStreakName:'꾸준한 습관',badgeMonthlyName:'챌린지 달성',
+       challengeName:'10일 건강 챌린지', challengeStart:'', challengeEnd:''};
 
 function loadSettings(){
     try{const sv=localStorage.getItem('monSettings');if(sv)S={...S,...JSON.parse(sv)};}catch(e){}
@@ -1247,9 +1291,23 @@ function loadSettings(){
     // 뱃지 설정 로드 및 렌더
     loadAwardSettings();
     loadManualAwards();
+    loadChallengeBadges();
+    loadBadgeGroupLabels();   // 그룹 이름·이모지 복원
+    loadPendingBadges();
+    loadDismissedBadges();
     renderAwardSettingList();
+    renderChallengeBadgeList();
+    // 챌린지 설정 UI 복원
+    const scn=document.getElementById('setting_challengeName');
+    if(scn&&S.challengeName)scn.value=S.challengeName;
+    const scs=document.getElementById('setting_challengeStart');
+    if(scs&&S.challengeStart)scs.value=S.challengeStart;
+    const sce=document.getElementById('setting_challengeEnd');
+    if(sce&&S.challengeEnd)sce.value=S.challengeEnd;
     // 서버에서 뱃지 설정 로드 (v2)
     loadBadgeConfigFromGAS();
+    // 기존 자동뱃지 초기화 마이그레이션 (1회)
+    if(!localStorage.getItem('badgeMigrationV3'))migrateOldBadges();
 }
 function saveSettings(){
     S.cafMaxFixed=parseFloat(document.getElementById('setting_cafMax').value)||0;
@@ -1264,6 +1322,9 @@ function saveSettings(){
     S.badgeHabitDays=parseInt(document.getElementById('setting_badgeHabitDays')?.value||3);
     S.badgeStreakDays=parseInt(document.getElementById('setting_badgeStreakDays')?.value||7);
     S.badgeMonthlyDays=parseInt(document.getElementById('setting_badgeMonthlyDays')?.value||10);
+    S.challengeName  = document.getElementById('setting_challengeName')?.value  || S.challengeName  || '10일 건강 챌린지';
+    S.challengeStart = document.getElementById('setting_challengeStart')?.value || S.challengeStart || '';
+    S.challengeEnd   = document.getElementById('setting_challengeEnd')?.value   || S.challengeEnd   || '';
     try{localStorage.setItem('monSettings',JSON.stringify(S));}catch(e){}
     saveAwardSettings();
     updateCafPreview(); updateSleepPreview();
@@ -1409,8 +1470,10 @@ function loadDataFromSheet(){
 
                 document.getElementById('lastUpdate').textContent='마지막 업데이트: '+new Date().toLocaleString('ko-KR');
                 initFilters();updateDashboard();updateCaffeineTab();updateSleepTab();updateStudentGrid();
+                // 챌린지 달성 감지 실행
+                detectPendingBadges();
                 // 뱃지 탭이 열려있으면 자동 갱신
-                if (document.getElementById('tab-awards')?.classList.contains('active')) renderAwardsTab();
+                if (document.getElementById('tab-awards')?.classList.contains('active')) {renderAwardsTab();renderPendingBadges();}
             }catch(err){
                 document.getElementById('studentGrid').innerHTML='<div style="grid-column:1/-1;text-align:center;padding:60px;background:white;border-radius:16px;"><div style="font-size:48px;margin-bottom:16px;">⚠️</div><h3 style="color:#ef4444;margin-bottom:12px;">데이터를 불러오지 못했습니다</h3><p style="color:#6b7280;margin-bottom:20px;">'+err.message+'</p><button onclick="loadDataFromSheet()" class="btn btn-primary">🔄 다시 시도</button></div>';
                 ['totalStudents','notRecordedToday','caffeineWarning','sleepWarning'].forEach(function(id){document.getElementById(id).textContent='-';});
@@ -1630,7 +1693,7 @@ function initFilters(){
     ['cafEndDate','sleepEndDate','studentEndDate','overviewEndDate'].forEach(id=>{const el=document.getElementById(id);if(el){if(!el.value)el.value=today;el.max=today;}});
     ['cafStartDate','sleepStartDate','studentStartDate','overviewStartDate','modalStartDate'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=weekAgo;});
 }
-function switchTab(n,el){document.querySelectorAll('.tab-button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));if(el)el.classList.add('active');document.getElementById('tab-'+n).classList.add('active');if(n==='inquiries'){inquiryFilter='unanswered';loadInquiries();loadSentMessages();}if(n==='awards'){renderAwardsTab();}}
+function switchTab(n,el){document.querySelectorAll('.tab-button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));if(el)el.classList.add('active');document.getElementById('tab-'+n).classList.add('active');if(n==='inquiries'){inquiryFilter='unanswered';loadInquiries();loadSentMessages();}if(n==='awards'){renderAwardsTab();renderPendingBadges();}if(n==='settings'){renderChallengeBadgeList();}}
 
 function updateDashboard(){
     const g=msGet('gradeFilter'), c=msGet('classFilter');
@@ -1999,81 +2062,63 @@ function filterStudents(){
     const d7=getStudentDates();
     const getRatio=id=>{const ac=avgCafForDates(id,d7);return ac/getLimit(id);};
 
-    // 단일 필터 (전체보기, 오늘 기록, 오늘 미기록)
-    if(activeFilters.single==='recorded'){
-        f=f.filter(s=>caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(fd))||sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===fd));
-        updateBadges();renderStudentGrid(f);return;
-    }
-    if(activeFilters.single==='notRecorded'){
-        f=f.filter(s=>!caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(fd))&&!sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===fd));
-        updateBadges();renderStudentGrid(f);return;
-    }
-
-    // 다중 선택 필터 (카페인 + 수면 칩)
-    const cafChips=activeFilters.caf; // Set
-    const sleepChips=activeFilters.sleep; // Set
-
+    // 다중 선택 필터
+    const cafChips=activeFilters.caf;
+    const sleepChips=activeFilters.sleep;
     const hasCafFilter=cafChips.size>0;
     const hasSleepFilter=sleepChips.size>0;
     const hasAwardFilter=activeFilters.award.size>0;
+    const hasRecordFilter=activeFilters.record.size>0;
 
-    if(hasCafFilter||hasSleepFilter||hasAwardFilter){
+    if(hasCafFilter||hasSleepFilter||hasAwardFilter||hasRecordFilter){
         f=f.filter(s=>{
-            let cafMatch=true, sleepMatch=true, awardMatch=true;
+            let cafMatch=true, sleepMatch=true, awardMatch=true, recordMatch=true;
+            if(hasRecordFilter){
+                const hasCaf=caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(fd));
+                const hasSleep=sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===fd);
+                const recorded=hasCaf||hasSleep;
+                if(activeFilters.record.has('recorded')&&activeFilters.record.has('notRecorded'))recordMatch=true;
+                else if(activeFilters.record.has('recorded'))recordMatch=recorded;
+                else if(activeFilters.record.has('notRecorded'))recordMatch=!recorded;
+            }
             if(hasCafFilter){
-                const ac=avgCafForDates(s.학번,d7);
-                const lim=getLimit(s.학번);
-                const hasRec=hasCafRecordOnDates(s.학번,d7);
-                const ratio=ac/lim;
-                // 해당 학생의 카페인 단계
+                const ac=avgCafForDates(s.학번,d7),lim=getLimit(s.학번);
+                const hasRec=hasCafRecordOnDates(s.학번,d7),ratio=ac/lim;
                 let stage='';
-                if(!hasRec) stage='cafNone';
-                else if(ac===0) stage='caf0';
-                else if(ratio<0.56) stage='caf1';
-                else if(ratio<1.0) stage='caf2';
-                else if(ratio<1.2) stage='caf3';
-                else if(ratio<2.0) stage='caf4';
+                if(!hasRec)stage='cafNone';
+                else if(ac===0)stage='caf0';
+                else if(ratio<0.56)stage='caf1';
+                else if(ratio<1.0)stage='caf2';
+                else if(ratio<1.2)stage='caf3';
+                else if(ratio<2.0)stage='caf4';
                 else stage='caf5';
                 cafMatch=cafChips.has(stage);
             }
             if(hasSleepFilter){
                 const y=avgSleepForDates(s.학번,d7);
                 let stage='';
-                if(y<=0) stage='sleepNone';
-                else if(y<S.sleepSevere) stage='sleepSevere';
-                else if(y<S.sleepWarn) stage='sleepBad';
-                else if(y<=S.sleepGood) stage='sleepGood';
+                if(y<=0)stage='sleepNone';
+                else if(y<S.sleepSevere)stage='sleepSevere';
+                else if(y<S.sleepWarn)stage='sleepBad';
+                else if(y<=S.sleepGood)stage='sleepGood';
                 else stage='sleepExcess';
                 sleepMatch=sleepChips.has(stage);
             }
             if(hasAwardFilter){
-                const autoList=evaluateAwards(s.학번,d7,fd);
-                const manualList=getManualAwardsFor(s.학번);
-                const hasTeacher=manualList.length>0;
                 const af=activeFilters.award;
-                // 자동뱃지: id 기반 매칭
-                const autoIds = new Set(autoList.map(a=>a.id));
-                const autoMatch = (
-                    (af.has('auto_habit_start')   && autoIds.has('habit_start'))   ||
-                    (af.has('auto_streak_record')  && autoIds.has('streak_record')) ||
-                    (af.has('auto_caf_safe')        && autoIds.has('caf_safe'))      ||
-                    (af.has('auto_sleep_good')      && autoIds.has('sleep_good'))    ||
-                    (af.has('auto_none')            && autoList.length === 0)
-                );
-                // 교사수여
-                const teacherMatch = (
-                    (af.has('awardTeacher')   && hasTeacher)  ||
-                    (af.has('awardNoTeacher') && !hasTeacher)
-                );
-                // 자동뱃지 필터가 있으면 OR, 교사수여 필터가 있으면 별도 OR
-                const hasAutoFilter   = af.has('auto_habit_start')||af.has('auto_streak_record')||af.has('auto_caf_safe')||af.has('auto_sleep_good');
-                const hasTeachFilter  = af.has('awardTeacher')||af.has('awardNoTeacher');
-                if (hasAutoFilter && hasTeachFilter) awardMatch = autoMatch && teacherMatch;
-                else if (hasAutoFilter)  awardMatch = autoMatch;
-                else if (hasTeachFilter) awardMatch = teacherMatch;
-                else awardMatch = true;
+                const hasTodayCaf=caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(fd));
+                const hasTodaySleep=sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===fd);
+                const hasTeacher=getManualAwardsFor(s.학번).length>0;
+                const autoMatch=(af.has('auto_today_caf')&&hasTodayCaf)||(af.has('auto_today_sleep')&&hasTodaySleep);
+                const teacherMatch=(af.has('awardTeacher')&&hasTeacher)||(af.has('awardNoTeacher')&&!hasTeacher);
+                const hasAutoFilter=af.has('auto_today_caf')||af.has('auto_today_sleep');
+                const hasTeachFilter=af.has('awardTeacher')||af.has('awardNoTeacher');
+                if(hasAutoFilter&&hasTeachFilter)awardMatch=autoMatch&&teacherMatch;
+                else if(hasAutoFilter)awardMatch=autoMatch;
+                else if(hasTeachFilter)awardMatch=teacherMatch;
+                else awardMatch=true;
             }
-            return cafMatch && sleepMatch && awardMatch;
+            return cafMatch&&sleepMatch&&awardMatch&&recordMatch;
         });
     }
 
@@ -2084,8 +2129,8 @@ function updateBadges(){
     const d7=getStudentDates();
     const n=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
     n('badgeAll',studentsData.length);
-    n('badgeRecorded',studentsData.filter(s=>caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(fd))||sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===fd)).length);
-    n('badgeNotRecorded',studentsData.filter(s=>!caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(fd))&&!sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===fd)).length);
+    n('cntRecorded',studentsData.filter(s=>caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(fd))||sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===fd)).length);
+    n('cntNotRecorded',studentsData.filter(s=>!caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(fd))&&!sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===fd)).length);
 
     // 카페인 단계별 카운트
     const getCafStage=s=>{
@@ -2122,18 +2167,12 @@ function updateBadges(){
     n('cntSleepExcess',studentsData.filter(s=>getSleepStage(s)==='sleepExcess').length);
     n('cntSleepNone',studentsData.filter(s=>getSleepStage(s)==='sleepNone').length);
 
-    // 뱃지 단계별 카운트
+    // 뱃지 카운트
     const fd2=getStudentFilterDate();
-    const d7b=getStudentDates();
-    // 자동뱃지 4종별 카운트
-    n('cntAuto_habit_start',   studentsData.filter(s=>evaluateAwards(s.학번,d7b,fd2).some(a=>a.id==='habit_start')).length);
-    n('cntAuto_streak_record', studentsData.filter(s=>evaluateAwards(s.학번,d7b,fd2).some(a=>a.id==='streak_record')).length);
-    n('cntAuto_caf_safe',       studentsData.filter(s=>evaluateAwards(s.학번,d7b,fd2).some(a=>a.id==='caf_safe')).length);
-    n('cntAuto_sleep_good',     studentsData.filter(s=>evaluateAwards(s.학번,d7b,fd2).some(a=>a.id==='sleep_good')).length);
-    n('cntAuto_none',           studentsData.filter(s=>evaluateAwards(s.학번,d7b,fd2).length===0).length);
-    // 교사수여
-    n('cntAwardTeacher',   studentsData.filter(s=>getManualAwardsFor(s.학번).length>0).length);
-    n('cntAwardNoTeacher', studentsData.filter(s=>getManualAwardsFor(s.학번).length===0).length);
+    n('cntAuto_today_caf',   studentsData.filter(s=>caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(fd2))).length);
+    n('cntAuto_today_sleep', studentsData.filter(s=>sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===fd2)).length);
+    n('cntAwardTeacher',     studentsData.filter(s=>getManualAwardsFor(s.학번).length>0).length);
+    n('cntAwardNoTeacher',   studentsData.filter(s=>getManualAwardsFor(s.학번).length===0).length);
 }
 // 드롭다운 토글
 function toggleAnalysisDrop(id){
@@ -2150,12 +2189,12 @@ document.addEventListener('click',e=>{
 });
 
 // ── 다중 선택 필터 상태 ──────────────────────────
-const activeFilters={single:'all', caf:new Set(), sleep:new Set(), award:new Set()};
+const activeFilters={single:'all', caf:new Set(), sleep:new Set(), award:new Set(), record:new Set()};
 
 // 카페인 단계 키 목록
 const CAF_KEYS=['caf0','caf1','caf2','caf3','caf4','caf5','cafNone'];
 const SLEEP_KEYS=['sleepSevere','sleepBad','sleepGood','sleepExcess','sleepNone'];
-const AWARD_KEYS=['auto_habit_start','auto_streak_record','auto_caf_safe','auto_sleep_good','auto_none','awardTeacher','awardNoTeacher'];
+const AWARD_KEYS=['auto_today_caf','auto_today_sleep','awardTeacher','awardNoTeacher'];
 
 function _syncCafUI(){
     const cnt=activeFilters.caf.size;
@@ -2194,47 +2233,44 @@ function _syncAwardUI(){
     const btn=document.getElementById('awardDropBtn');
     const badge=document.getElementById('awardSelBadge');
     if(!btn)return;
-    if(cnt>0){
-        btn.classList.add('has-selection-award');
-        badge.style.display='inline';badge.textContent=cnt;
-    } else {
-        btn.classList.remove('has-selection-award');
-        badge.style.display='none';
-    }
-    AWARD_KEYS.forEach(k=>{
-        const chk=document.getElementById('chk_'+k);
-        if(chk)chk.checked=activeFilters.award.has(k);
-    });
+    if(cnt>0){btn.classList.add('has-selection-award');badge.style.display='inline';badge.textContent=cnt;}
+    else{btn.classList.remove('has-selection-award');badge.style.display='none';}
+    AWARD_KEYS.forEach(k=>{const chk=document.getElementById('chk_'+k);if(chk)chk.checked=activeFilters.award.has(k);});
+}
+function _syncRecordUI(){
+    const s=activeFilters.record;
+    const btn=document.getElementById('recordDropBtn');
+    const badge=document.getElementById('recordSelBadge');
+    const chkR=document.getElementById('chk_recorded');
+    const chkN=document.getElementById('chk_notRecorded');
+    if(chkR)chkR.checked=s.has('recorded');
+    if(chkN)chkN.checked=s.has('notRecorded');
+    if(btn){btn.classList.toggle('has-selection-record',s.size>0);}
+    if(badge){badge.style.display=s.size>0?'':'none';badge.textContent=s.size;}
 }
 
 function toggleCafItem(key){
     activeFilters.single='';
     document.getElementById('filterAll').classList.remove('active');
-    document.getElementById('filterRecorded')?.classList.remove('active');
-    document.getElementById('filterNotRecorded').classList.remove('active');
     if(activeFilters.caf.has(key))activeFilters.caf.delete(key);
     else activeFilters.caf.add(key);
     _syncCafUI();
-    if(activeFilters.caf.size===0&&activeFilters.sleep.size===0){clearAllFilters();return;}
+    if(activeFilters.caf.size===0&&activeFilters.sleep.size===0&&activeFilters.award.size===0&&activeFilters.record.size===0){clearAllFilters();return;}
     filterStudents();
 }
 function toggleSleepItem(key){
     activeFilters.single='';
     document.getElementById('filterAll').classList.remove('active');
-    document.getElementById('filterRecorded')?.classList.remove('active');
-    document.getElementById('filterNotRecorded').classList.remove('active');
     if(activeFilters.sleep.has(key))activeFilters.sleep.delete(key);
     else activeFilters.sleep.add(key);
     _syncSleepUI();
-    if(activeFilters.caf.size===0&&activeFilters.sleep.size===0){clearAllFilters();return;}
+    if(activeFilters.caf.size===0&&activeFilters.sleep.size===0&&activeFilters.award.size===0&&activeFilters.record.size===0){clearAllFilters();return;}
     filterStudents();
 }
 function selectAllCaf(e){
     e.stopPropagation();
     activeFilters.single='';
     document.getElementById('filterAll').classList.remove('active');
-    document.getElementById('filterRecorded')?.classList.remove('active');
-    document.getElementById('filterNotRecorded').classList.remove('active');
     CAF_KEYS.forEach(k=>activeFilters.caf.add(k));
     _syncCafUI();filterStudents();
 }
@@ -2242,15 +2278,13 @@ function clearCaf(e){
     e.stopPropagation();
     activeFilters.caf.clear();
     _syncCafUI();
-    if(activeFilters.sleep.size===0)clearAllFilters();
+    if(activeFilters.sleep.size===0&&activeFilters.award.size===0&&activeFilters.record.size===0)clearAllFilters();
     else filterStudents();
 }
 function selectAllSleep(e){
     e.stopPropagation();
     activeFilters.single='';
     document.getElementById('filterAll').classList.remove('active');
-    document.getElementById('filterRecorded')?.classList.remove('active');
-    document.getElementById('filterNotRecorded').classList.remove('active');
     SLEEP_KEYS.forEach(k=>activeFilters.sleep.add(k));
     _syncSleepUI();filterStudents();
 }
@@ -2258,7 +2292,23 @@ function clearSleep(e){
     e.stopPropagation();
     activeFilters.sleep.clear();
     _syncSleepUI();
-    if(activeFilters.caf.size===0&&activeFilters.award.size===0)clearAllFilters();
+    if(activeFilters.caf.size===0&&activeFilters.award.size===0&&activeFilters.record.size===0)clearAllFilters();
+    else filterStudents();
+}
+function toggleRecordItem(key){
+    activeFilters.single='';
+    document.getElementById('filterAll').classList.remove('active');
+    if(activeFilters.record.has(key))activeFilters.record.delete(key);
+    else activeFilters.record.add(key);
+    _syncRecordUI();
+    if(activeFilters.record.size===0&&activeFilters.caf.size===0&&activeFilters.sleep.size===0&&activeFilters.award.size===0){clearAllFilters();return;}
+    filterStudents();
+}
+function clearRecord(e){
+    if(e)e.stopPropagation();
+    activeFilters.record.clear();
+    _syncRecordUI();
+    if(activeFilters.caf.size===0&&activeFilters.sleep.size===0&&activeFilters.award.size===0)clearAllFilters();
     else filterStudents();
 }
 
@@ -2266,20 +2316,16 @@ function clearSleep(e){
 function toggleAwardItem(key){
     activeFilters.single='';
     document.getElementById('filterAll').classList.remove('active');
-    document.getElementById('filterRecorded')?.classList.remove('active');
-    document.getElementById('filterNotRecorded').classList.remove('active');
     if(activeFilters.award.has(key))activeFilters.award.delete(key);
     else activeFilters.award.add(key);
     _syncAwardUI();
-    if(activeFilters.award.size===0&&activeFilters.caf.size===0&&activeFilters.sleep.size===0){clearAllFilters();return;}
+    if(activeFilters.award.size===0&&activeFilters.caf.size===0&&activeFilters.sleep.size===0&&activeFilters.record.size===0){clearAllFilters();return;}
     filterStudents();
 }
 function selectAllAward(e){
     e.stopPropagation();
     activeFilters.single='';
     document.getElementById('filterAll').classList.remove('active');
-    document.getElementById('filterRecorded')?.classList.remove('active');
-    document.getElementById('filterNotRecorded').classList.remove('active');
     AWARD_KEYS.forEach(k=>activeFilters.award.add(k));
     _syncAwardUI();filterStudents();
 }
@@ -2296,26 +2342,15 @@ function clearAllFilters(){
     activeFilters.caf.clear();
     activeFilters.sleep.clear();
     activeFilters.award.clear();
-    _syncCafUI();_syncSleepUI();_syncAwardUI();
+    activeFilters.record.clear();
+    _syncCafUI();_syncSleepUI();_syncAwardUI();_syncRecordUI();
     document.getElementById('filterAll').classList.add('active');
-    document.getElementById('filterRecorded')?.classList.remove('active');
-    document.getElementById('filterNotRecorded').classList.remove('active');
-    filterStudents();
-}
-function toggleSingleFilter(type){
-    if(activeFilters.single===type){clearAllFilters();return;}
-    activeFilters.single=type;
-    activeFilters.caf.clear();activeFilters.sleep.clear();activeFilters.award.clear();
-    _syncCafUI();_syncSleepUI();_syncAwardUI();
-    document.getElementById('filterAll').classList.remove('active');
-    document.getElementById('filterRecorded')?.classList.toggle('active',type==='recorded');
-    document.getElementById('filterNotRecorded').classList.toggle('active',type==='notRecorded');
     filterStudents();
 }
 function setFilterType(t){
     if(t==='all')clearAllFilters();
-    else if(t==='recorded')toggleSingleFilter('recorded');
-    else if(t==='notRecorded')toggleSingleFilter('notRecorded');
+    else if(t==='recorded')toggleRecordItem('recorded');
+    else if(t==='notRecorded')toggleRecordItem('notRecorded');
 }
 function updateStudentGrid(){const dtEl=document.getElementById('studentDateFilter');if(dtEl&&!dtEl.value){dtEl.value=today;dtEl.max=today;}onStudentDateChange();}
 function getRecentCaf(id){
@@ -3455,26 +3490,31 @@ function showTeacherConfirm(emoji, title, message, onConfirm) {
     document.getElementById('_confirmOkBtn').onclick = () => { overlay.remove(); onConfirm(); };
 }
 
-function showTeacherModal(emoji, title, message, type, onConfirmCb) {
+// opts: { confirmBtnText, confirmBtnColor, headerBg } — confirm 타입 커스터마이징
+function showTeacherModal(emoji, title, message, type, onConfirmCb, opts) {
     const existing = document.getElementById('teacherAlertModal');
     if (existing) existing.remove();
+    opts = opts || {};
 
-    // confirm 타입: 취소/확인 두 버튼
+    // confirm 타입: 취소/확인 두 버튼 (색상·문구 커스터마이징 가능)
     if (type === 'confirm') {
+        const headerBg   = opts.headerBg       || '#ef4444';
+        const btnColor   = opts.confirmBtnColor || '#ef4444';
+        const btnText    = opts.confirmBtnText  || '삭제';
         const overlay = document.createElement('div');
         overlay.id = 'teacherAlertModal';
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:2000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);animation:fadeInOverlay 0.2s ease;';
         overlay.innerHTML = `
             <div style="background:white;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.25);width:340px;overflow:hidden;animation:modalPop 0.25s ease-out;">
-                <div style="background:#ef4444;padding:24px 24px 18px;text-align:center;">
+                <div style="background:${headerBg};padding:24px 24px 18px;text-align:center;">
                     <div style="font-size:44px;margin-bottom:8px;line-height:1;">${emoji}</div>
                     <div style="font-size:19px;font-weight:700;color:white;">${title}</div>
                 </div>
                 <div style="padding:18px 24px 22px;text-align:center;">
-                    <p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:18px;">${message}</p>
+                    <p style="font-size:14px;color:#374151;line-height:1.8;margin-bottom:18px;">${message}</p>
                     <div style="display:flex;gap:10px;">
                         <button id="_tmCancelBtn" style="flex:1;background:#f3f4f6;color:#374151;border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;">취소</button>
-                        <button id="_tmOkBtn" style="flex:1;background:#ef4444;color:white;border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;">삭제</button>
+                        <button id="_tmOkBtn" style="flex:1;background:${btnColor};color:white;border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;">${btnText}</button>
                     </div>
                 </div>
             </div>`;
@@ -3839,27 +3879,23 @@ function submitManualAward() {
     closeManualAwardModal();
 }
 
-// ─── 수여 뱃지를 포함한 renderAwardChips 확장 ─────────────
-// (기존 함수 오버라이드 — 자동+수동 합쳐서 렌더)
+// ─── renderAwardChips: 오늘기록 자동뱃지 + 교사수여 뱃지 ───
 function renderAwardChips(studentId, dates, baseDate, showDelete) {
-    const autoEarned = evaluateAwards(studentId, dates, baseDate);
+    const autoEarned = evaluateAutoTodayBadges(studentId, baseDate);
     const manualList = getManualAwardsFor(studentId);
-
     let html = '';
-    // 자동 뱃지
+    // 자동 뱃지 (오늘 기록만)
     autoEarned.forEach(a => {
-        const isUrl = a.image && (a.image.startsWith('http') || a.image.startsWith('/'));
-        const imgHtml = isUrl
-            ? `<img src="${a.image}" class="_badge-img-popup" data-src="${a.image.replace(/"/g,'&quot;')}" data-name="${(a.name||'').replace(/"/g,'&quot;')}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;cursor:pointer;" onerror="this.style.display='none'">`
-            : `<span style="font-size:13px;">${a.image || '🏅'}</span>`;
-        html += `<span class="award-chip" style="background:${a.bg||'#f3f4f6'};color:${a.color||'#374151'};" title="자동 뱃지">${imgHtml} ${a.name}</span>`;
+        html += `<span class="award-chip" style="background:${a.bg||'#f3f4f6'};color:${a.color||'#374151'};" title="자동 뱃지">
+            <span style="font-size:13px;">${a.image||'🏅'}</span> ${a.name}
+        </span>`;
     });
-    // 수동 뱃지 (교사 수여)
+    // 교사 수여 뱃지
     manualList.forEach((a, idx) => {
         const isUrl = a.image && (a.image.startsWith('http') || a.image.startsWith('/'));
         const imgHtml = isUrl
             ? `<img src="${a.image}" class="_badge-img-popup" data-src="${a.image.replace(/"/g,'&quot;')}" data-name="${(a.name||'').replace(/"/g,'&quot;')}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;cursor:pointer;" onerror="this.style.display='none'">`
-            : `<span style="font-size:13px;">${a.image || '🏅'}</span>`;
+            : `<span style="font-size:13px;">${a.image||'🏅'}</span>`;
         const msgTitle = a.message ? ` — ${a.message}` : '';
         const delBtn = showDelete
             ? `<button onclick="event.stopPropagation();deleteManualAward('${studentId}',${idx})" title="뱃지 삭제" style="margin-left:3px;background:none;border:none;cursor:pointer;color:${a.color||'#6366f1'};font-size:10px;opacity:0.7;padding:0;line-height:1;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">✕</button>` : '';
@@ -3873,9 +3909,13 @@ function deleteManualAward(studentId, idx) {
     const id = String(studentId);
     if (!manualAwards[id] || !manualAwards[id][idx]) return;
     const award = manualAwards[id][idx];
+    const student = studentsData.find(s => String(s.학번) === id);
+    const studentLabel = student
+        ? `<strong>${student.학번} ${student.이름}</strong>`
+        : `<strong>${studentId}</strong>`;
     showTeacherConfirm(
         '🗑️', '뱃지 삭제',
-        `"${award.name}" 뱃지를<br><strong>${studentId}</strong> 학생에게서 삭제하시겠습니까?`,
+        `"${award.name}" 뱃지를<br>${studentLabel} 학생에게서 삭제하시겠습니까?`,
         () => _doDeleteManualAward(studentId, idx)
     );
 }
@@ -3904,6 +3944,7 @@ function _doDeleteManualAward(studentId, idx) {
 
     // UI 즉각 갱신
     updateStudentGrid();
+    renderAwardsTab();   // ⭐ 수여 현황 탭 즉시 재렌더 (삭제 즉시 반영)
     if (currentStudentId === studentId) {
         const endDate = document.getElementById('modalEndDate')?.value || today;
         const dates = getModalDates();
@@ -4227,51 +4268,18 @@ function saveAwardSettings() {
     try { localStorage.setItem('awardSettings', JSON.stringify(awardSettings)); } catch(e) {}
 }
 
-// 뱃지 조건 평가: 주어진 학생ID, 날짜배열, 기준일에 대해 획득 뱃지 배열 반환
-function evaluateAwards(studentId, dates, baseDate) {
+// 자동 뱃지: 오늘 카페인/수면 기록만 (교사 승인 없이 자동 표시)
+function evaluateAutoTodayBadges(studentId, baseDate) {
     const earned = [];
-    const minDays = parseInt(document.getElementById('setting_awardMinDays')?.value || S.awardMinDays || 5);
-
-    // ── 시스템 뱃지: 편집 목록과 무관하게 항상 평가 ──
-    // 🌱 습관의 시작 — 교사 설정 N일 연속 기록
-    const habitN = S.badgeHabitDays || 3;
-    const lastNDays = Array.from({length: habitN}, (_, n) => {
-        const d = new Date(baseDate + 'T00:00:00');
-        d.setDate(d.getDate() - n);
-        return d.toISOString().split('T')[0];
-    });
-    if (lastNDays.every(d =>
-        caffeineData.some(c => c.학번 === studentId && c.섭취시간.startsWith(d)) ||
-        sleepData.some(sl => sl.학번 === studentId && sl.날짜 === d)
-    )) earned.push(SYSTEM_BADGE_DEFS.habit_start);
-
-    // 🏆 꾸준한 기록 — 조회 7일 중 minDays 이상 기록
-    const recDays = dates.filter(d =>
-        caffeineData.some(c => c.학번 === studentId && c.섭취시간.startsWith(d)) ||
-        sleepData.some(sl => sl.학번 === studentId && sl.날짜 === d)
-    ).length;
-    if (recDays >= minDays) earned.push(SYSTEM_BADGE_DEFS.streak_record);
-
-    // ── 커스텀/일반 뱃지 루프 ──
-    awardSettings.forEach(award => {
-        let pass = false;
-        if (award.id === 'caf_safe') {
-            const hasRec = hasCafRecordOnDates(studentId, dates);
-            if (hasRec) {
-                const ac = avgCafForDates(studentId, dates);
-                const lim = getLimit(studentId);
-                pass = (ac / lim) < 0.56;
-            }
-        } else if (award.id === 'sleep_good') {
-            const asl = avgSleepForDates(studentId, dates);
-            pass = asl >= S.sleepWarn && asl <= S.sleepGood;
-        } else if (award.id !== 'habit_start' && award.id !== 'streak_record' && award.id !== 'today_record') {
-            // 커스텀 뱃지: 자동 표시 안 함 — 교사가 직접 수여해야만 학생 카드에 표시됨
-            pass = false;
-        }
-        if (pass) earned.push(award);
-    });
+    const todayCaf   = caffeineData.some(c  => c.학번  === studentId && c.섭취시간.startsWith(baseDate));
+    const todaySleep = sleepData.some(sl => sl.학번 === studentId && sl.날짜 === baseDate);
+    if (todayCaf)   earned.push({ id:'today_caf',   name:'카페인 오늘 기록', image:'☕', bg:'#ecfdf5', color:'#059669' });
+    if (todaySleep) earned.push({ id:'today_sleep', name:'수면 오늘 기록',   image:'😴', bg:'#eff6ff', color:'#2563eb' });
     return earned;
+}
+// 하위 호환 래퍼 (기존 evaluateAwards 호출 유지)
+function evaluateAwards(studentId, dates, baseDate) {
+    return evaluateAutoTodayBadges(studentId, baseDate);
 }
 
 // ── 설정 에디터 렌더 ──────────────────────────────────────
@@ -4409,6 +4417,629 @@ document.addEventListener('click', function(e) {
     e.stopPropagation();
     openImagePopup(img.dataset.src || img.src, img.dataset.name || '');
 });
+
+// ═══════════════════════════════════════════════════════════
+// 🏅 챌린지 뱃지 시스템 (교사 승인 방식)
+// ═══════════════════════════════════════════════════════════
+
+// 챌린지/연속 뱃지 정의 (교사 설정, localStorage 저장)
+let challengeBadges = [
+    { id:'badge_caf_habit3',     name:'카페인 습관의 시작', image:'🌱', bg:'#ecfdf5', color:'#065f46', type:'caffeine', method:'consecutive', days:3 },
+    { id:'badge_caf_streak7',    name:'카페인 꾸준한 습관', image:'🍀', bg:'#f0fdf4', color:'#166534', type:'caffeine', method:'consecutive', days:7 },
+    { id:'badge_sleep_habit3',   name:'수면 습관의 시작',   image:'🌙', bg:'#eff6ff', color:'#1e40af', type:'sleep',    method:'consecutive', days:3 },
+    { id:'badge_sleep_streak7',  name:'수면 꾸준한 습관',   image:'⭐', bg:'#fefce8', color:'#854d0e', type:'sleep',    method:'consecutive', days:7 },
+    { id:'badge_caf_challenge',  name:'카페인 챌린지 달성', image:'🎯', bg:'#fff7ed', color:'#9a3412', type:'caffeine', method:'cumulative',  days:10 },
+    { id:'badge_sleep_challenge',name:'수면 챌린지 달성',   image:'🏆', bg:'#f5f3ff', color:'#4c1d95', type:'sleep',    method:'cumulative',  days:10 },
+];
+let pendingBadges  = [];
+let dismissedBadges = [];
+let pendingBadgeFilter = null; // null=전체 | 'group:habit' | 'group:streak' | 'group:challenge' | 개별badgeId
+let pendingSelected = new Set(); // 선택된 항목 키 Set ('{studentId}|{badgeId}')
+
+// 뱃지 카테고리 그룹 정의 (label·emoji는 localStorage로 덮어씌움)
+let BADGE_GROUPS = [
+    { key:'habit',     label:'습관의 시작', emoji:'🌱',
+      ids:['badge_caf_habit3','badge_sleep_habit3'],
+      subs:[{label:'카페인', emoji:'☕', id:'badge_caf_habit3'},{label:'수면', emoji:'🌙', id:'badge_sleep_habit3'}] },
+    { key:'streak',    label:'꾸준한 습관', emoji:'🍀',
+      ids:['badge_caf_streak7','badge_sleep_streak7'],
+      subs:[{label:'카페인', emoji:'☕', id:'badge_caf_streak7'},{label:'수면', emoji:'⭐', id:'badge_sleep_streak7'}] },
+    { key:'challenge', label:'챌린지 달성', emoji:'🎯',
+      ids:['badge_caf_challenge','badge_sleep_challenge'],
+      subs:[{label:'카페인', emoji:'🎯', id:'badge_caf_challenge'},{label:'수면', emoji:'🏆', id:'badge_sleep_challenge'}] },
+];
+// 그룹 레이블 로컬 저장/불러오기
+function saveBadgeGroupLabels(){
+    const data={};
+    BADGE_GROUPS.forEach(g=>{ data[g.key]={emoji:g.emoji, label:g.label}; });
+    try{ localStorage.setItem('badgeGroupLabels', JSON.stringify(data)); }catch(e){}
+}
+function loadBadgeGroupLabels(){
+    try{
+        const r=localStorage.getItem('badgeGroupLabels');
+        if(!r)return;
+        const data=JSON.parse(r);
+        BADGE_GROUPS.forEach(g=>{
+            if(data[g.key]){
+                if(data[g.key].emoji) g.emoji=data[g.key].emoji;
+                if(data[g.key].label) g.label=data[g.key].label;
+            }
+        });
+    }catch(e){}
+}
+// 그룹 레이블 즉시 업데이트 (입력 시 호출)
+function updateBadgeGroupLabel(key, field, value){
+    const grp=BADGE_GROUPS.find(g=>g.key===key);
+    if(grp) grp[field]=value;
+}
+function getFilteredPending(){
+    if(!pendingBadgeFilter) return pendingBadges;
+    if(pendingBadgeFilter.startsWith('group:')){
+        const key=pendingBadgeFilter.slice(6);
+        const grp=BADGE_GROUPS.find(g=>g.key===key);
+        return grp ? pendingBadges.filter(p=>grp.ids.includes(p.badgeId)) : pendingBadges;
+    }
+    return pendingBadges.filter(p=>p.badgeId===pendingBadgeFilter);
+}
+
+function loadChallengeBadges(){
+    try{const r=localStorage.getItem('challengeBadges');if(r)challengeBadges=JSON.parse(r);}catch(e){}
+}
+function saveChallengeBadges(){
+    try{localStorage.setItem('challengeBadges',JSON.stringify(challengeBadges));}catch(e){}
+}
+function loadPendingBadges(){
+    try{const r=localStorage.getItem('pendingBadges');if(r)pendingBadges=JSON.parse(r);}catch(e){}
+}
+function savePendingBadges(){
+    try{localStorage.setItem('pendingBadges',JSON.stringify(pendingBadges));}catch(e){}
+}
+function loadDismissedBadges(){
+    try{const r=localStorage.getItem('dismissedBadges');if(r)dismissedBadges=JSON.parse(r);}catch(e){}
+}
+function saveDismissedBadges(){
+    try{localStorage.setItem('dismissedBadges',JSON.stringify(dismissedBadges));}catch(e){}
+}
+
+// 기존 자동뱃지 초기화 (1회 마이그레이션)
+function migrateOldBadges(){
+    const OLD_IDS=['habit_start','streak_record','caf_safe','sleep_good'];
+    let changed=false;
+    Object.keys(manualAwards).forEach(sid=>{
+        const before=manualAwards[sid].length;
+        manualAwards[sid]=manualAwards[sid].filter(a=>!OLD_IDS.includes(a.id));
+        if(!manualAwards[sid].length){delete manualAwards[sid];changed=true;}
+        else if(manualAwards[sid].length!==before)changed=true;
+    });
+    if(changed)saveManualAwards();
+    localStorage.setItem('badgeMigrationV3','1');
+}
+
+// ── 달성 감지 함수 ────────────────────────────────────────
+function checkConsecutiveDays(studentId, type, n, baseDate){
+    for(let i=0;i<n;i++){
+        const d=new Date(baseDate+'T00:00:00');d.setDate(d.getDate()-i);
+        const ds=d.toISOString().split('T')[0];
+        let has=false;
+        if(type==='caffeine'||type==='both') has=has||caffeineData.some(c=>c.학번===studentId&&c.섭취시간.startsWith(ds));
+        if(type==='sleep'||type==='both')    has=has||sleepData.some(sl=>sl.학번===studentId&&sl.날짜===ds);
+        if(!has)return false;
+    }
+    return true;
+}
+function checkCumulativeDays(studentId, type, n, startDate, endDate){
+    const dates=getCustomRange(startDate,endDate);
+    let count=0;
+    dates.forEach(d=>{
+        let has=false;
+        if(type==='caffeine'||type==='both') has=has||caffeineData.some(c=>c.학번===studentId&&c.섭취시간.startsWith(d));
+        if(type==='sleep'||type==='both')    has=has||sleepData.some(sl=>sl.학번===studentId&&sl.날짜===d);
+        if(has)count++;
+    });
+    return count>=n;
+}
+function detectPendingBadges(){
+    const awarded=new Set();
+    Object.entries(manualAwards).forEach(([sid,list])=>{
+        list.forEach(a=>{if(a.badgeId)awarded.add(sid+'|'+a.badgeId);});
+    });
+    const dismissed=new Set(dismissedBadges.map(d=>d.studentId+'|'+d.badgeId));
+    const newPending=[];
+    studentsData.forEach(s=>{
+        challengeBadges.forEach(badge=>{
+            const key=s.학번+'|'+badge.id;
+            if(awarded.has(key)||dismissed.has(key))return;
+            if(pendingBadges.some(p=>p.studentId===s.학번&&p.badgeId===badge.id))return;
+            let achieved=false;
+            if(badge.method==='consecutive'){
+                achieved=checkConsecutiveDays(s.학번,badge.type,badge.days,today);
+            } else if(badge.method==='cumulative'){
+                if(S.challengeStart&&S.challengeEnd)
+                    achieved=checkCumulativeDays(s.학번,badge.type,badge.days,S.challengeStart,S.challengeEnd);
+            }
+            if(achieved)newPending.push({studentId:s.학번,badgeId:badge.id,detectedAt:today});
+        });
+    });
+    if(newPending.length){pendingBadges.push(...newPending);savePendingBadges();}
+    renderPendingBadges();
+}
+
+// ── 승인 대기 UI ──────────────────────────────────────────
+function renderPendingBadges(){
+    const section=document.getElementById('pendingBadgesSection');
+    const listEl=document.getElementById('pendingBadgeList');
+    const filterEl=document.getElementById('pendingBadgeFilter');
+    const countEl=document.getElementById('pendingCount');
+    if(!section||!listEl)return;
+    if(!pendingBadges.length){section.style.display='none';renderDismissedBadges();return;}
+    section.style.display='block';
+    if(countEl)countEl.textContent=pendingBadges.length;
+
+    // 필터값 유효성 검사
+    if(pendingBadgeFilter){
+        if(pendingBadgeFilter.startsWith('group:')){
+            const key=pendingBadgeFilter.slice(6);
+            const grp=BADGE_GROUPS.find(g=>g.key===key);
+            if(!grp||!pendingBadges.some(p=>grp.ids.includes(p.badgeId))) pendingBadgeFilter=null;
+        } else {
+            if(!pendingBadges.some(p=>p.badgeId===pendingBadgeFilter)) pendingBadgeFilter=null;
+        }
+    }
+
+    // ── 계층 필터 UI 렌더 ──
+    if(filterEl){
+        const btnBase=(active,accent)=>
+            `display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:20px;`+
+            `border:2px solid ${active?accent:'#e5e7eb'};background:${active?accent:'white'};`+
+            `color:${active?'white':'#6b7280'};font-size:12px;font-weight:600;cursor:pointer;`+
+            `transition:all .2s;white-space:nowrap;`;
+        const cntPill=(active,n)=>
+            `<span style="background:${active?'rgba(255,255,255,0.3)':'#e5e7eb'};color:${active?'white':'#374151'};`+
+            `padding:1px 7px;border-radius:10px;font-size:11px;font-weight:700;">${n}명</span>`;
+
+        const groupCnt=key=>{ const g=BADGE_GROUPS.find(x=>x.key===key); return g?pendingBadges.filter(p=>g.ids.includes(p.badgeId)).length:0; };
+        const badgeCnt=id=>pendingBadges.filter(p=>p.badgeId===id).length;
+
+        // ① 드롭다운 select (optgroup 계층)
+        let selectOpts=`<option value="">전체 (${pendingBadges.length}명)</option>`;
+        BADGE_GROUPS.forEach(grp=>{
+            const gc=groupCnt(grp.key);
+            if(!gc)return;
+            const gKey=`group:${grp.key}`;
+            selectOpts+=`<optgroup label="${grp.emoji} ${grp.label} (${gc}명)">`;
+            selectOpts+=`<option value="${gKey}" ${pendingBadgeFilter===gKey?'selected':''}>　전체 (${gc}명)</option>`;
+            grp.subs.forEach(sub=>{
+                const sc=badgeCnt(sub.id);
+                if(!sc)return;
+                selectOpts+=`<option value="${sub.id}" ${pendingBadgeFilter===sub.id?'selected':''}>　　${sub.emoji} ${sub.label} (${sc}명)</option>`;
+            });
+            selectOpts+=`</optgroup>`;
+        });
+
+        // ② 1단계 그룹 버튼
+        const allActive=pendingBadgeFilter===null;
+        let row1=`<button onclick="setPendingFilter(null)" style="${btnBase(allActive,'#f59e0b')}">전체 ${cntPill(allActive,pendingBadges.length)}</button>`;
+        BADGE_GROUPS.forEach(grp=>{
+            const gc=groupCnt(grp.key);
+            if(!gc)return;
+            const gKey=`group:${grp.key}`;
+            const isGrpActive=pendingBadgeFilter===gKey||grp.subs.some(s=>pendingBadgeFilter===s.id);
+            row1+=`<button onclick="setPendingFilter('${gKey}')" style="${btnBase(isGrpActive,'#f59e0b')}">${grp.emoji} ${grp.label} ${cntPill(isGrpActive,gc)}</button>`;
+        });
+
+        // ③ 2단계 서브 버튼 (현재 선택된 그룹 내부만 표시)
+        const activeGrp=BADGE_GROUPS.find(grp=>
+            pendingBadgeFilter===`group:${grp.key}` || grp.subs.some(s=>pendingBadgeFilter===s.id)
+        );
+        let row2='';
+        if(activeGrp){
+            activeGrp.subs.forEach(sub=>{
+                const sc=badgeCnt(sub.id);
+                if(!sc)return;
+                const isSub=pendingBadgeFilter===sub.id;
+                const accent=sub.label==='카페인'?'#ef4444':'#3b82f6';
+                row2+=`<button onclick="setPendingFilter('${sub.id}')" style="${btnBase(isSub,accent)}">${sub.emoji} ${sub.label} ${cntPill(isSub,sc)}</button>`;
+            });
+        }
+
+        filterEl.innerHTML=`
+            <div style="margin-bottom:10px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                    <span style="font-size:12px;font-weight:600;color:#92400e;">필터</span>
+                    <select onchange="setPendingFilter(this.value||null)"
+                        style="padding:7px 12px;border:2px solid #fde68a;border-radius:10px;font-size:13px;font-weight:600;background:#fffbeb;color:#92400e;cursor:pointer;outline:none;">
+                        ${selectOpts}
+                    </select>
+                </div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">${row1}</div>
+                ${row2?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;padding-left:14px;border-left:3px solid #fde68a;">${row2}</div>`:''}
+            </div>`;
+    }
+
+    // ── 필터 적용 후 목록 렌더 ──
+    const filtered=getFilteredPending();
+
+    // 현재 필터 기준 전체 선택 여부
+    const filteredKeys=filtered.map(p=>`${p.studentId}|${p.badgeId}`);
+    const allChecked=filteredKeys.length>0&&filteredKeys.every(k=>pendingSelected.has(k));
+
+    // ── 일괄 수여 액션 바 ──
+    const bulkBar=document.getElementById('pendingBulkBar');
+    if(bulkBar){
+        const selCnt=filteredKeys.filter(k=>pendingSelected.has(k)).length;
+        bulkBar.style.display='flex';
+        bulkBar.style.cssText='display:flex;align-items:center;gap:10px;padding:10px 14px;'
+            +'background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;margin-bottom:8px;flex-wrap:wrap;';
+        bulkBar.innerHTML=`
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:600;color:#374151;user-select:none;">
+                <input type="checkbox" id="pendingSelectAll" ${allChecked?'checked':''}
+                    onchange="togglePendingSelectAll(this.checked)"
+                    style="width:16px;height:16px;accent-color:#f59e0b;cursor:pointer;">
+                전체 선택
+            </label>
+            <span style="font-size:12px;color:#6b7280;">
+                현재 표시된 <strong>${filtered.length}명</strong> 중
+                <strong id="pendingSelCount" style="color:#f59e0b;">${selCnt}명</strong> 선택됨
+            </span>
+            <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+                <button onclick="clearPendingSelection()"
+                    style="padding:6px 14px;background:#f3f4f6;color:#6b7280;border:1.5px solid #d1d5db;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">
+                    선택 해제
+                </button>
+                <button onclick="bulkApprovePending()"
+                    ${selCnt===0?'disabled':''}
+                    style="padding:6px 16px;background:${selCnt>0?'#10b981':'#d1d5db'};color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:${selCnt>0?'pointer':'not-allowed'};">
+                    ✅ 선택 일괄 수여 ${selCnt>0?`(${selCnt}명)`:''}
+                </button>
+            </div>`;
+    }
+
+    listEl.innerHTML=filtered.map((p)=>{
+        const student=studentsData.find(s=>s.학번===p.studentId);
+        const badge=challengeBadges.find(b=>b.id===p.badgeId);
+        if(!student||!badge)return'';
+        const key=`${p.studentId}|${p.badgeId}`;
+        const isChecked=pendingSelected.has(key);
+        const achieveDesc=badge.method==='consecutive'
+            ?`${badge.days}일 연속 달성`
+            :`챌린지 기간(${(S.challengeStart||'').substring(5)}~${(S.challengeEnd||'').substring(5)}) ${badge.days}일 달성`;
+        return `<div onclick="togglePendingSelect('${key}')" style="display:flex;align-items:center;gap:12px;padding:12px 14px;
+            background:${isChecked?'#fef9c3':'#fffbeb'};border:1.5px solid ${isChecked?'#f59e0b':'#fde68a'};
+            border-radius:10px;flex-wrap:wrap;cursor:pointer;transition:all .15s;"
+            onmouseover="this.style.borderColor='#f59e0b'" onmouseout="this.style.borderColor='${isChecked?'#f59e0b':'#fde68a'}'">
+            <input type="checkbox" ${isChecked?'checked':''} onclick="event.stopPropagation();togglePendingSelect('${key}')"
+                style="width:16px;height:16px;accent-color:#f59e0b;cursor:pointer;flex-shrink:0;">
+            <span style="font-size:22px;">${badge.image}</span>
+            <div style="flex:1;min-width:120px;">
+                <div style="font-size:14px;font-weight:700;color:#1f2937;">${student.학번} ${student.이름}</div>
+                <div style="font-size:13px;color:#92400e;font-weight:600;">${badge.name}</div>
+                <div style="font-size:11px;color:#6b7280;">${achieveDesc} · 감지: ${p.detectedAt}</div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;" onclick="event.stopPropagation()">
+                <button onclick="openStudentForBadgeReview('${p.studentId}','${p.badgeId}')"
+                    style="padding:6px 12px;background:#eef2ff;color:#4f46e5;border:1.5px solid #c7d2fe;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">🔍 기록 확인</button>
+                <button onclick="approvePendingBadge('${p.studentId}','${p.badgeId}')"
+                    style="padding:6px 12px;background:#d1fae5;color:#065f46;border:1.5px solid #6ee7b7;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">✅ 수여</button>
+                <button onclick="dismissPendingBadge('${p.studentId}','${p.badgeId}')"
+                    style="padding:6px 12px;background:#f3f4f6;color:#6b7280;border:1.5px solid #d1d5db;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">⏸ 보류</button>
+            </div>
+        </div>`;
+    }).join('');
+    renderDismissedBadges();
+}
+function setPendingFilter(val){
+    pendingBadgeFilter=val||null;
+    pendingSelected.clear(); // 필터 바뀌면 선택 초기화
+    renderPendingBadges();
+}
+// ── 체크박스 선택 핸들러 ──
+function togglePendingSelect(key){
+    if(pendingSelected.has(key)) pendingSelected.delete(key);
+    else pendingSelected.add(key);
+    renderPendingBadges();
+}
+function togglePendingSelectAll(checked){
+    const filtered=getFilteredPending();
+    if(checked) filtered.forEach(p=>pendingSelected.add(`${p.studentId}|${p.badgeId}`));
+    else filtered.forEach(p=>pendingSelected.delete(`${p.studentId}|${p.badgeId}`));
+    renderPendingBadges();
+}
+function clearPendingSelection(){
+    pendingSelected.clear();
+    renderPendingBadges();
+}
+// ── 일괄 수여 ──
+function bulkApprovePending(){
+    const keys=[...pendingSelected];
+    if(!keys.length)return;
+    // 선택된 항목 목록 구성
+    const items=keys.map(k=>{
+        const [sid,bid]=k.split('|');
+        const student=studentsData.find(s=>String(s.학번)===sid);
+        const badge=challengeBadges.find(b=>b.id===bid);
+        return {studentId:sid,badgeId:bid,student,badge};
+    }).filter(x=>x.student&&x.badge);
+    if(!items.length)return;
+
+    // 확인 모달 — 수여 목록 미리 보여주기
+    const listHtml=items.map(x=>
+        `<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#f0fdf4;border-radius:8px;margin-bottom:4px;">
+            <span style="font-size:16px;">${x.badge.image}</span>
+            <span style="font-size:13px;font-weight:600;color:#1f2937;">${x.student.학번} ${x.student.이름}</span>
+            <span style="font-size:12px;color:#6b7280;margin-left:auto;">${x.badge.name}</span>
+        </div>`
+    ).join('');
+
+    showTeacherModal(
+        '🏅', '일괄 수여 확인',
+        `<div style="font-size:14px;font-weight:600;color:#1f2937;margin-bottom:10px;">
+            총 <strong style="color:#10b981;">${items.length}명</strong>에게 뱃지를 수여합니다.
+        </div>
+        <div style="max-height:240px;overflow-y:auto;padding-right:4px;">${listHtml}</div>
+        <div style="font-size:12px;color:#6b7280;margin-top:10px;">※ 수여 후 취소는 개별 삭제로 가능합니다.</div>`,
+        'confirm',
+        ()=>_doBulkApprovePending(items),
+        {headerBg:'#10b981', confirmBtnColor:'#10b981', confirmBtnText:`✅ ${items.length}명 일괄 수여`}
+    );
+}
+function _doBulkApprovePending(items){
+    const grantedAt=new Date().toISOString().split('T')[0];
+    items.forEach(({studentId,badgeId,badge})=>{
+        const id=String(studentId);
+        if(!manualAwards[id])manualAwards[id]=[];
+        manualAwards[id].push({badgeId:badge.id,name:badge.name,image:badge.image,bg:badge.bg,color:badge.color,grantedAt,grantedBy:'교사승인',message:''});
+        pendingBadges=pendingBadges.filter(p=>!(p.studentId===studentId&&p.badgeId===badgeId));
+    });
+    saveManualAwards();
+    savePendingBadges();
+    pendingSelected.clear();
+    // GAS 일괄 동기화
+    try{
+        items.forEach(({studentId,badge})=>{
+            const id=String(studentId);
+            google.script.run.withSuccessHandler(()=>{}).withFailureHandler(()=>{})
+                .grantTeacherAwards({studentIds:[id],awards:[{awardId:badge.id,name:badge.name,image:badge.image,bg:badge.bg,color:badge.color,grantedAt,message:''}],message:'',grantedBy:'교사승인',grantedAt});
+        });
+    }catch(e){}
+    renderPendingBadges();
+    renderAwardsTab();
+    updateStudentGrid();
+    showTeacherModal('🏅','일괄 수여 완료',`<strong>${items.length}명</strong>에게 뱃지 수여가 완료되었습니다.`,'success');
+}
+function renderDismissedBadges(){
+    const listEl=document.getElementById('dismissedBadgeList');
+    if(!listEl)return;
+    if(!dismissedBadges.length){listEl.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:6px;">보류된 항목이 없습니다.</div>';return;}
+    listEl.innerHTML=dismissedBadges.map((d,idx)=>{
+        const student=studentsData.find(s=>s.학번===d.studentId);
+        const badge=challengeBadges.find(b=>b.id===d.badgeId);
+        if(!student||!badge)return'';
+        return`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;flex-wrap:wrap;">
+            <span style="font-size:18px;opacity:0.6;">${badge.image}</span>
+            <div style="flex:1;font-size:13px;color:#6b7280;">${student.이름} (${student.학번}) — ${badge.name} · 보류: ${d.dismissedAt}</div>
+            <button onclick="undoDismissBadge('${d.studentId}','${d.badgeId}')"
+                style="padding:4px 10px;background:#ede9fe;color:#7c3aed;border:1px solid #c4b5fd;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;">🔄 보류 해제</button>
+        </div>`;
+    }).join('');
+}
+function approvePendingBadge(studentId, badgeId){
+    const badge=challengeBadges.find(b=>b.id===badgeId);
+    if(!badge)return;
+    // 학생 이름 조회
+    const student=studentsData.find(s=>String(s.학번)===String(studentId));
+    const sName=student?student.이름:'';
+    const sLabel=sName
+        ? `<strong>${sName}</strong> <span style="color:#6b7280;font-size:12px;">(${studentId})</span>`
+        : `<strong>${studentId}</strong>`;
+    // ① 수여 전 확인 모달
+    showTeacherModal(
+        badge.image||'🏅',
+        '뱃지 수여 확인',
+        `${sLabel} 학생에게<br><strong style="color:#065f46;">"${badge.name}"</strong><br>뱃지를 수여하겠습니까?`,
+        'confirm',
+        ()=>_doApprovePendingBadge(studentId,badgeId,badge,sName||studentId),
+        {headerBg:'#10b981', confirmBtnColor:'#10b981', confirmBtnText:'수여하기'}
+    );
+}
+function _doApprovePendingBadge(studentId,badgeId,badge,displayName){
+    const id=String(studentId);
+    if(!manualAwards[id])manualAwards[id]=[];
+    const grantedAt=new Date().toISOString().split('T')[0];
+    manualAwards[id].push({badgeId:badge.id,name:badge.name,image:badge.image,bg:badge.bg,color:badge.color,grantedAt,grantedBy:'교사승인',message:''});
+    saveManualAwards();
+    pendingBadges=pendingBadges.filter(p=>!(p.studentId===studentId&&p.badgeId===badgeId));
+    savePendingBadges();
+    // GAS 동기화 시도
+    try{
+        google.script.run.withSuccessHandler(()=>{}).withFailureHandler(()=>{})
+            .grantTeacherAwards({studentIds:[id],awards:[{awardId:badge.id,name:badge.name,image:badge.image,bg:badge.bg,color:badge.color,grantedAt,message:''}],message:'',grantedBy:'교사승인',grantedAt});
+    }catch(e){}
+    renderPendingBadges();renderAwardsTab();updateStudentGrid();
+    // ② 수여 완료 알림 — 이름(학번) 표시
+    showTeacherModal('🏅','수여 완료',`<strong>${displayName}</strong> (${studentId}) 학생에게<br><strong>"${badge.name}"</strong> 뱃지를 수여했습니다.`,'success');
+}
+function dismissPendingBadge(studentId, badgeId){
+    dismissedBadges.push({studentId,badgeId,dismissedAt:today});
+    saveDismissedBadges();
+    pendingBadges=pendingBadges.filter(p=>!(p.studentId===studentId&&p.badgeId===badgeId));
+    savePendingBadges();
+    renderPendingBadges();
+}
+function undoDismissBadge(studentId, badgeId){
+    dismissedBadges=dismissedBadges.filter(d=>!(d.studentId===studentId&&d.badgeId===badgeId));
+    saveDismissedBadges();
+    detectPendingBadges();
+}
+function openStudentForBadgeReview(studentId, badgeId){
+    const badge=challengeBadges.find(b=>b.id===badgeId);
+    openStudentModal(studentId);
+    if(badge&&badge.method==='cumulative'&&S.challengeStart&&S.challengeEnd){
+        modalPeriodMode='custom';
+        ['7','14','30','custom'].forEach(m=>document.getElementById('modalPeriodBtn'+m)?.classList.toggle('active',m==='custom'));
+        const msw=document.getElementById('modalStartDateWrap');if(msw)msw.style.display='flex';
+        const msd=document.getElementById('modalStartDate');if(msd)msd.value=S.challengeStart;
+        const med=document.getElementById('modalEndDate');if(med)med.value=S.challengeEnd;
+        refreshModalData();
+    }
+    // 뱃지 현황 탭에서 열었을 때 모달이 body에 붙어있으므로 별도 탭 전환 불필요
+}
+
+// ── 설정 탭: 챌린지 뱃지 목록 렌더 (그룹 카드 방식) ──────
+function renderChallengeBadgeList(){
+    const container=document.getElementById('challengeBadgeList');
+    if(!container)return;
+    container.innerHTML='';
+
+    // 그룹 색상 팔레트
+    const GROUP_STYLE={
+        habit:   {headerBg:'#f0fdf4', headerBorder:'#86efac', headerColor:'#166534', border:'#d1fae5'},
+        streak:  {headerBg:'#fefce8', headerBorder:'#fde047', headerColor:'#854d0e', border:'#fef08a'},
+        challenge:{headerBg:'#fff7ed',headerBorder:'#fdba74', headerColor:'#9a3412', border:'#fed7aa'},
+    };
+    const SUB_STYLE={
+        caffeine:{bg:'#fff1f2', color:'#dc2626', label:'☕ 카페인'},
+        sleep:   {bg:'#eff6ff', color:'#1d4ed8', label:'🌙 수면'},
+    };
+
+    // ① 기본 그룹 카드 렌더
+    BADGE_GROUPS.forEach(grp=>{
+        const gs=GROUP_STYLE[grp.key]||{headerBg:'#f9fafb',headerBorder:'#d1d5db',headerColor:'#374151',border:'#e5e7eb'};
+        const card=document.createElement('div');
+        card.style.cssText=`border:1.5px solid ${gs.border};border-radius:12px;overflow:hidden;`;
+
+        // 그룹 헤더 (이모지·이름 직접 편집 가능)
+        let html=`<div style="display:flex;align-items:center;gap:6px;background:${gs.headerBg};padding:8px 14px;border-bottom:1px solid ${gs.headerBorder};">
+            <input type="text" value="${grp.emoji}"
+                title="그룹 이모지 수정"
+                style="width:34px;text-align:center;font-size:17px;border:1.5px solid transparent;border-radius:6px;background:transparent;cursor:pointer;padding:2px;transition:border-color .2s;"
+                onfocus="this.style.borderColor='${gs.headerBorder}';this.style.background='white';"
+                onblur="this.style.borderColor='transparent';this.style.background='transparent';"
+                oninput="updateBadgeGroupLabel('${grp.key}','emoji',this.value)">
+            <input type="text" value="${grp.label}"
+                title="그룹 이름 수정"
+                style="font-size:14px;font-weight:700;color:${gs.headerColor};border:none;border-bottom:1.5px dashed ${gs.headerBorder};background:transparent;padding:2px 4px;min-width:60px;width:auto;outline:none;cursor:text;transition:border-color .2s;"
+                onfocus="this.style.borderBottomColor='${gs.headerColor}';"
+                onblur="this.style.borderBottomColor='${gs.headerBorder}';"
+                oninput="updateBadgeGroupLabel('${grp.key}','label',this.value)">
+            <span style="font-size:10px;color:#9ca3af;margin-left:2px;">✏️ 수정 가능</span>
+        </div>`;
+
+        // 서브 행
+        html+=`<div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px;background:#fff;">`;
+        grp.subs.forEach(sub=>{
+            const bidx=challengeBadges.findIndex(b=>b.id===sub.id);
+            if(bidx===-1)return;
+            const b=challengeBadges[bidx];
+            const isC=b.method==='consecutive';
+            const ss=SUB_STYLE[sub.label==='카페인'?'caffeine':'sleep'];
+            html+=`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:${ss.bg};border-radius:8px;padding:8px 12px;">
+                <span style="font-size:12px;font-weight:700;color:${ss.color};min-width:56px;white-space:nowrap;">${ss.label}</span>
+                <input type="text" value="${b.image||sub.emoji}" placeholder="이모지"
+                    style="width:36px;text-align:center;padding:3px;border:1px solid #d1d5db;border-radius:6px;font-size:15px;background:white;"
+                    oninput="challengeBadges[${bidx}].image=this.value">
+                <input type="text" value="${b.name||''}" placeholder="뱃지 이름"
+                    style="flex:1;min-width:100px;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:600;background:white;"
+                    oninput="challengeBadges[${bidx}].name=this.value">
+                <button onclick="toggleChallengeBadgeMethod(${bidx},this)" data-method="${b.method}"
+                    style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;${isC?'background:#dcfce7;color:#166534;border:1px solid #86efac;':'background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;'}">
+                    ${isC?'🔁 연속':'📊 누적'}
+                </button>
+                <div style="display:flex;align-items:center;gap:4px;">
+                    <input type="number" value="${b.days||3}" min="1" max="365"
+                        style="width:52px;padding:5px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;font-weight:700;text-align:center;background:white;"
+                        oninput="challengeBadges[${bidx}].days=parseInt(this.value)||1">
+                    <span style="font-size:12px;color:#6b7280;white-space:nowrap;">일</span>
+                </div>
+            </div>`;
+        });
+        html+=`</div>`;
+        card.innerHTML=html;
+        container.appendChild(card);
+    });
+
+    // ② 커스텀 뱃지 (기본 그룹에 없는 것)
+    const defaultIds=BADGE_GROUPS.flatMap(g=>g.ids);
+    const customList=challengeBadges.filter(b=>!defaultIds.includes(b.id));
+    if(customList.length){
+        const section=document.createElement('div');
+        section.innerHTML=`<div style="font-size:12px;font-weight:700;color:#374151;margin:6px 0 6px 2px;">🌟 커스텀 뱃지</div>`;
+        customList.forEach(badge=>{
+            const idx=challengeBadges.indexOf(badge);
+            const isC=badge.method==='consecutive';
+            const row=document.createElement('div');
+            row.style.cssText='display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:#fff;border:1px solid #d1d5db;border-radius:8px;padding:8px 10px;margin-bottom:6px;';
+            row.innerHTML=`
+                <input type="text" value="${badge.image||'🌟'}" placeholder="이모지"
+                    style="width:38px;text-align:center;padding:4px;border:1px solid #d1d5db;border-radius:6px;font-size:16px;"
+                    oninput="challengeBadges[${idx}].image=this.value">
+                <input type="text" value="${badge.name||''}" placeholder="뱃지 이름"
+                    style="width:130px;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-weight:600;"
+                    oninput="challengeBadges[${idx}].name=this.value">
+                <select onchange="challengeBadges[${idx}].type=this.value"
+                    style="padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;">
+                    <option value="caffeine" ${badge.type==='caffeine'?'selected':''}>☕ 카페인</option>
+                    <option value="sleep"    ${badge.type==='sleep'?'selected':''}>😴 수면</option>
+                    <option value="both"     ${badge.type==='both'?'selected':''}>☕+😴 둘 다</option>
+                </select>
+                <button onclick="toggleChallengeBadgeMethod(${idx},this)" data-method="${badge.method}"
+                    style="padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;${isC?'background:#dcfce7;color:#166534;border:1px solid #86efac;':'background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;'}">
+                    ${isC?'🔁 연속':'📊 누적'}
+                </button>
+                <input type="number" value="${badge.days||3}" min="1" max="365"
+                    style="width:52px;padding:5px 6px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;text-align:center;"
+                    oninput="challengeBadges[${idx}].days=parseInt(this.value)||1">
+                <span style="font-size:12px;color:#6b7280;">일</span>
+                <button onclick="removeChallengeBadge(${idx})"
+                    style="margin-left:auto;padding:3px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:12px;cursor:pointer;">삭제</button>
+            `;
+            section.appendChild(row);
+        });
+        container.appendChild(section);
+    }
+}
+function toggleChallengeBadgeMethod(idx, btn){
+    const isConsec=btn.dataset.method==='consecutive';
+    challengeBadges[idx].method=isConsec?'cumulative':'consecutive';
+    btn.dataset.method=challengeBadges[idx].method;
+    if(!isConsec){
+        btn.textContent='🔁 연속';
+        btn.style.background='#dcfce7';btn.style.color='#166534';btn.style.border='1px solid #86efac';
+    } else {
+        btn.textContent='📊 누적';
+        btn.style.background='#dbeafe';btn.style.color='#1e40af';btn.style.border='1px solid #93c5fd';
+    }
+}
+function addChallengeBadge(){
+    challengeBadges.push({id:'badge_custom_'+Date.now(),name:'새 뱃지',image:'🌟',bg:'#f5f3ff',color:'#7c3aed',type:'caffeine',method:'consecutive',days:3});
+    renderChallengeBadgeList();
+}
+function removeChallengeBadge(idx){
+    challengeBadges.splice(idx,1);
+    renderChallengeBadgeList();
+}
+function saveChallengeBadgeSettings(){
+    const nameEl=document.getElementById('setting_challengeName');
+    const startEl=document.getElementById('setting_challengeStart');
+    const endEl=document.getElementById('setting_challengeEnd');
+    if(nameEl)S.challengeName=nameEl.value;
+    if(startEl)S.challengeStart=startEl.value;
+    if(endEl)S.challengeEnd=endEl.value;
+    saveChallengeBadges();
+    saveBadgeGroupLabels();   // 그룹 이름·이모지 저장
+    try{localStorage.setItem('monSettings',JSON.stringify(S));}catch(e){}
+    // 저장 후 감지 재실행
+    detectPendingBadges();
+    // GAS 서버 동기화
+    try{
+        google.script.run
+            .withSuccessHandler(()=>{ const s=document.getElementById('challengeSaveStatus'); if(s){s.textContent='✅ 서버 저장 완료'; setTimeout(()=>s.textContent='',2500);} })
+            .withFailureHandler(()=>{ const s=document.getElementById('challengeSaveStatus'); if(s){s.textContent='⚠️ 로컬 저장됨(서버 실패)'; setTimeout(()=>s.textContent='',3000);} })
+            .saveChallengeBadgeConfig({ challengeName:S.challengeName, challengeStart:S.challengeStart, challengeEnd:S.challengeEnd, badges:challengeBadges });
+    } catch(e) {
+        const s=document.getElementById('challengeSaveStatus');
+        if(s){s.textContent='✅ 로컬 저장됨'; setTimeout(()=>s.textContent='',2000);}
+    }
+}
 
 </script>
 </body>
