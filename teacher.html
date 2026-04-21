@@ -23,6 +23,9 @@
         .btn-green{background:#10b981;color:white;} .btn-green:hover{background:#059669;} .btn-green:disabled{background:#9ca3af;cursor:not-allowed;}
         .btn-blue{background:#3b82f6;color:white;} .btn-blue:hover{background:#2563eb;}
         .btn-sm{padding:7px 14px;font-size:13px;}
+        .period-btn{padding:5px 13px;border:1.5px solid #e5e7eb;border-radius:20px;background:white;color:#6b7280;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;line-height:1.4;}
+        .period-btn.active{background:#6366f1;border-color:#6366f1;color:white;}
+        .period-btn:hover:not(.active){background:#f3f4f6;border-color:#d1d5db;}
         .tab-nav{background:white;border-bottom:2px solid #e5e7eb;margin-top:20px;display:flex;}
         .tab-button{padding:16px 28px;background:transparent;border:none;font-size:15px;font-weight:600;color:#6b7280;cursor:pointer;transition:all 0.3s;border-bottom:3px solid transparent;}
         .tab-button:hover{color:#4f46e5;background:rgba(79,70,229,0.05);}
@@ -168,10 +171,7 @@
         @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
         @keyframes fadeInOverlay{from{opacity:0}to{opacity:1}}
         @keyframes modalPop{from{opacity:0;transform:scale(0.88) translateY(-10px)}to{opacity:1;transform:scale(1) translateY(0)}}
-        .modal-actions{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;}
-        .ai-period-btn{font-size:11px;padding:3px 9px;border:1.5px solid #d1d5db;border-radius:6px;background:white;color:#6b7280;cursor:pointer;font-weight:600;transition:all .15s;}
-        .ai-period-btn:hover{border-color:#6366f1;color:#6366f1;}
-        .ai-period-btn.active-period{border-color:#6366f1;background:#eef2ff;color:#4f46e5;}
+        .modal-actions{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
         .section-title{font-size:17px;font-weight:700;color:#1f2937;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
         .dual-chart-container{position:relative;height:290px;}
         .data-table{width:100%;border-collapse:separate;border-spacing:0;margin-top:12px;}
@@ -535,17 +535,32 @@
             <div id="gradeFilter" class="ms-wrap"></div>
             <label style="font-weight:600;color:#1f2937;">반:</label>
             <div id="classFilter" class="ms-wrap"></div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto;">
+                <label style="font-size:13px;font-weight:600;color:#374151;">📅 조회기간:</label>
+                <div style="display:flex;gap:4px;">
+                    <button class="period-btn active" id="overviewPeriodBtn7" onclick="setOverviewPeriod('7')">7일</button>
+                    <button class="period-btn" id="overviewPeriodBtn14" onclick="setOverviewPeriod('14')">14일</button>
+                    <button class="period-btn" id="overviewPeriodBtn30" onclick="setOverviewPeriod('30')">1개월</button>
+                    <button class="period-btn" id="overviewPeriodBtnCustom" onclick="setOverviewPeriod('custom')">직접설정</button>
+                </div>
+                <div id="overviewCustomDateDiv" style="display:none;gap:6px;align-items:center;flex-wrap:wrap;">
+                    <input type="date" id="overviewStartDate" style="padding:5px 10px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;" onchange="updateDashboard()">
+                    <span style="color:#6b7280;">~</span>
+                    <input type="date" id="overviewEndDate" style="padding:5px 10px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;" onchange="updateDashboard()">
+                </div>
+                <span id="overviewDateRangeLabel" style="font-size:12px;color:#6366f1;font-weight:600;background:#eef2ff;padding:4px 10px;border-radius:12px;"></span>
+            </div>
         </div>
         <div id="alerts"></div>
         <div class="stats-grid">
             <div class="stat-card"><div class="stat-label">전체 학생 수</div><div class="stat-value" id="totalStudents">-</div><div class="stat-detail">모니터링 중</div></div>
             <div class="stat-card"><div class="stat-label">오늘 미기록</div><div class="stat-value" style="color:#6b7280" id="notRecordedToday">-</div><div class="stat-detail">오늘 기록 없음</div></div>
-            <div class="stat-card"><div class="stat-label">카페인 주의</div><div class="stat-value" style="color:#ef4444" id="caffeineWarning">-</div><div class="stat-detail">7일 평균 권장량 초과</div></div>
+            <div class="stat-card"><div class="stat-label">카페인 주의</div><div class="stat-value" style="color:#ef4444" id="caffeineWarning">-</div><div class="stat-detail" id="cafWarningDetail">7일 평균 권장량 초과</div></div>
             <div class="stat-card"><div class="stat-label">심각한 수면 부족</div><div class="stat-value" style="color:#ef4444" id="sleepWarning">-</div><div class="stat-detail" id="sleepWarningDetail">7일 평균 6시간 미만</div></div>
         </div>
         <div class="chart-grid">
-            <div class="chart-card"><h3 class="chart-title">☕ 학생별 카페인 7일 평균</h3><div class="chart-container"><canvas id="studentCaffeineChart"></canvas></div></div>
-            <div class="chart-card"><h3 class="chart-title">😴 학생별 수면 7일 평균</h3><div class="chart-container"><canvas id="studentSleepChart"></canvas></div></div>
+            <div class="chart-card"><h3 class="chart-title">☕ 학생별 카페인 <span id="overviewCafTitle">7일</span> 평균</h3><div class="chart-container"><canvas id="studentCaffeineChart"></canvas></div></div>
+            <div class="chart-card"><h3 class="chart-title">😴 학생별 수면 <span id="overviewSleepTitle">7일</span> 평균</h3><div class="chart-container"><canvas id="studentSleepChart"></canvas></div></div>
         </div>
     </div>
     <!-- 카페인 분석 -->
@@ -557,18 +572,33 @@
                 <div id="cafGradeFilter" class="ms-wrap"></div>
                 <label style="font-size:13px;font-weight:600;color:#374151;">반:</label>
                 <div id="cafClassFilter" class="ms-wrap"></div>
-                <label style="font-size:13px;font-weight:600;color:#374151;">📅 기준일:</label>
-                <input type="date" id="cafDateFilter" style="padding:7px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;" onchange="updateCaffeineTab()">
+                <div style="display:flex;gap:4px;">
+                    <button class="period-btn active" id="cafPeriodBtn7" onclick="setCafPeriod('7')">7일</button>
+                    <button class="period-btn" id="cafPeriodBtn14" onclick="setCafPeriod('14')">14일</button>
+                    <button class="period-btn" id="cafPeriodBtn30" onclick="setCafPeriod('30')">1개월</button>
+                    <button class="period-btn" id="cafPeriodBtnCustom" onclick="setCafPeriod('custom')">직접설정</button>
+                </div>
+                <div id="cafNormalDateDiv" style="display:flex;gap:6px;align-items:center;">
+                    <label style="font-size:13px;font-weight:600;color:#374151;">📅 기준일:</label>
+                    <input type="date" id="cafDateFilter" style="padding:7px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;" onchange="updateCaffeineTab()">
+                    <button class="btn btn-sm" style="background:#f3f4f6;color:#374151;border:none;" onclick="resetCafDate()">오늘</button>
+                </div>
+                <div id="cafCustomDateDiv" style="display:none;gap:6px;align-items:center;">
+                    <label style="font-size:13px;font-weight:600;color:#374151;">📅 시작일:</label>
+                    <input type="date" id="cafStartDate" style="padding:7px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;" onchange="updateCaffeineTab()">
+                    <span style="color:#6b7280;">~</span>
+                    <label style="font-size:13px;font-weight:600;color:#374151;">종료일:</label>
+                    <input type="date" id="cafEndDate" style="padding:7px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;" onchange="updateCaffeineTab()">
+                </div>
                 <span id="cafDateRangeLabel" style="font-size:12px;color:#6366f1;font-weight:600;background:#eef2ff;padding:4px 10px;border-radius:12px;"></span>
-                <button class="btn btn-sm" style="background:#f3f4f6;color:#374151;border:none;" onclick="resetCafDate()">오늘</button>
             </div>
         </div>
         <div class="chart-grid">
-            <div class="chart-card"><h3 class="chart-title">일별 평균 카페인 (7일)</h3><div class="chart-container"><canvas id="dailyCaffeineChart"></canvas></div></div>
-            <div class="chart-card"><h3 class="chart-title">카페인 단계별 학생 수 (7일 평균)</h3><div class="chart-container"><canvas id="gradeCaffeineChart"></canvas></div></div>
+            <div class="chart-card"><h3 class="chart-title">일별 평균 카페인 (<span id="cafChartLabel1">7일</span>)</h3><div class="chart-container"><canvas id="dailyCaffeineChart"></canvas></div></div>
+            <div class="chart-card"><h3 class="chart-title">카페인 단계별 학생 수 (<span id="cafChartLabel2">7일</span> 평균)</h3><div class="chart-container"><canvas id="gradeCaffeineChart"></canvas></div></div>
             <div class="chart-card"><h3 class="chart-title">음료 종류별 비율</h3><div class="chart-container"><canvas id="drinkTypeChart"></canvas></div></div>
             <div class="chart-card"><h3 class="chart-title">카페인 섭취 시간대</h3><div class="chart-container"><canvas id="caffeineTimeChart"></canvas></div></div>
-            <div class="chart-card" style="grid-column:1/-1;"><h3 class="chart-title">☕ 카페인 섭취 이유 분포</h3><div class="chart-container" style="height:280px;"><canvas id="cafReasonChart"></canvas></div><div id="cafReasonEmpty" style="display:none;text-align:center;color:#9ca3af;padding:40px;font-size:14px;">섭취 이유 기록이 없습니다.</div></div>
+            <div class="chart-card" style="grid-column:1/-1;"><h3 class="chart-title">☕ 카페인 섭취 이유 분포 <span style="font-size:13px;font-weight:400;color:#9ca3af;">(<span id="cafChartLabel3">7일</span> 기준 · 중복 선택 포함)</span></h3><div id="cafReasonNoData" style="display:none;text-align:center;padding:40px;color:#9ca3af;font-size:14px;">섭취 이유 데이터가 없습니다.</div><div class="chart-container" id="cafReasonWrap" style="height:260px;"><canvas id="cafReasonChart"></canvas></div></div>
         </div>
     </div>
     <!-- 수면 분석 -->
@@ -580,35 +610,46 @@
                 <div id="sleepGradeFilter" class="ms-wrap"></div>
                 <label style="font-size:13px;font-weight:600;color:#374151;">반:</label>
                 <div id="sleepClassFilter" class="ms-wrap"></div>
-                <label style="font-size:13px;font-weight:600;color:#374151;">📅 기준일:</label>
-                <input type="date" id="sleepDateFilter" style="padding:7px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;" onchange="updateSleepTab()">
+                <div style="display:flex;gap:4px;">
+                    <button class="period-btn active" id="sleepPeriodBtn7" onclick="setSleepPeriod('7')">7일</button>
+                    <button class="period-btn" id="sleepPeriodBtn14" onclick="setSleepPeriod('14')">14일</button>
+                    <button class="period-btn" id="sleepPeriodBtn30" onclick="setSleepPeriod('30')">1개월</button>
+                    <button class="period-btn" id="sleepPeriodBtnCustom" onclick="setSleepPeriod('custom')">직접설정</button>
+                </div>
+                <div id="sleepNormalDateDiv" style="display:flex;gap:6px;align-items:center;">
+                    <label style="font-size:13px;font-weight:600;color:#374151;">📅 기준일:</label>
+                    <input type="date" id="sleepDateFilter" style="padding:7px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;" onchange="updateSleepTab()">
+                    <button class="btn btn-sm" style="background:#f3f4f6;color:#374151;border:none;" onclick="resetSleepDate()">오늘</button>
+                </div>
+                <div id="sleepCustomDateDiv" style="display:none;gap:6px;align-items:center;">
+                    <label style="font-size:13px;font-weight:600;color:#374151;">📅 시작일:</label>
+                    <input type="date" id="sleepStartDate" style="padding:7px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;" onchange="updateSleepTab()">
+                    <span style="color:#6b7280;">~</span>
+                    <label style="font-size:13px;font-weight:600;color:#374151;">종료일:</label>
+                    <input type="date" id="sleepEndDate" style="padding:7px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;" onchange="updateSleepTab()">
+                </div>
                 <span id="sleepDateRangeLabel" style="font-size:12px;color:#10b981;font-weight:600;background:#ecfdf5;padding:4px 10px;border-radius:12px;"></span>
-                <button class="btn btn-sm" style="background:#f3f4f6;color:#374151;border:none;" onclick="resetSleepDate()">오늘</button>
             </div>
         </div>
         <div class="chart-grid">
             <div class="chart-card"><h3 class="chart-title">평균 취침 시간 분포</h3><div class="chart-container"><canvas id="bedtimeChart"></canvas></div></div>
             <div class="chart-card"><h3 class="chart-title">평균 기상 시간 분포</h3><div class="chart-container"><canvas id="wakeupChart"></canvas></div></div>
-            <div class="chart-card"><h3 class="chart-title">평균 7일간 컨디션 분포</h3><div class="chart-container"><canvas id="avgSleepChart"></canvas></div></div>
+            <div class="chart-card"><h3 class="chart-title">평균 <span id="sleepChartLabel1">7일</span>간 컨디션 분포</h3><div class="chart-container"><canvas id="avgSleepChart"></canvas></div></div>
             <div class="chart-card"><h3 class="chart-title">수면시간 분포</h3><div class="chart-container"><canvas id="sleepDistChart"></canvas></div></div>
             <div class="chart-card" style="grid-column:1/-1;">
-                <h3 class="chart-title">📝 수면 메모 주제별 분석 <span style="font-size:13px;font-weight:400;color:#9ca3af;">Gemini AI</span></h3>
-                <!-- 메모 미리보기: 자동 표시 -->
-                <div id="memoPreviewSection" style="margin-bottom:4px;">
-                    <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:10px;">📋 수면 메모 목록 <span style="font-size:11px;font-weight:400;color:#9ca3af;">탭 전환 시 자동 갱신</span></div>
-                    <div id="memoPreviewList"><p style="color:#9ca3af;font-size:13px;text-align:center;padding:20px;">수면 탭을 열면 자동으로 표시됩니다.</p></div>
-                </div>
-                <div style="border-top:2px dashed #e5e7eb;margin:20px 0;"></div>
-                <!-- Gemini AI 주제 분류: 버튼 클릭 -->
-                <div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-                        <div>
-                            <span style="font-size:13px;font-weight:600;color:#374151;">🤖 Gemini AI 주제별 분류</span>
-                            <span style="font-size:11px;font-weight:400;color:#9ca3af;margin-left:8px;">비슷한 내용끼리 묶어 수면 방해 원인을 파악합니다</span>
-                        </div>
-                        <button onclick="requestSleepTopicAnalysis()" id="topicAnalysisBtn" class="btn btn-sm" style="background:#8b5cf6;color:white;padding:8px 18px;">🔍 AI 주제 분류</button>
+                <h3 class="chart-title">📝 수면 메모 워드클라우드 <span style="font-size:13px;font-weight:400;color:#9ca3af;">(<span id="sleepChartLabel2">7일</span> 기준 · 자주 나온 단어일수록 크게 표시)</span></h3>
+                <div id="sleepMemoNoData" style="text-align:center;padding:40px;color:#9ca3af;font-size:14px;">수면 메모 데이터가 없습니다.</div>
+                <div id="sleepMemoWrap" style="display:none;width:100%;min-height:200px;padding:16px 24px;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;justify-content:center;"></div>
+                <!-- AI 분류 버튼 & 결과 영역 -->
+                <div id="sleepMemoAiArea" style="display:none;margin-top:16px;border-top:1px solid #f3f4f6;padding-top:14px;">
+                    <div style="text-align:center;margin-bottom:12px;">
+                        <button id="sleepMemoAiBtn" onclick="aiGroupSleepWords()"
+                            style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border:none;border-radius:20px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(99,102,241,0.35);">
+                            🤖 AI로 단어 분류하기
+                        </button>
+                        <p style="font-size:11px;color:#9ca3af;margin-top:6px;">Gemini AI가 비슷한 단어끼리 카테고리로 묶어줍니다</p>
                     </div>
-                    <div id="topicAnalysisResult"><p style="color:#9ca3af;font-size:13px;">AI 버튼을 누르면 Gemini가 메모를 의미별로 분류합니다.</p></div>
+                    <div id="sleepMemoAiResult" style="display:none;"></div>
                 </div>
             </div>
         </div>
@@ -623,30 +664,31 @@
                 <div id="studentGradeFilter" class="ms-wrap"></div>
                 <div id="studentClassFilter" class="ms-wrap"></div>
             </div>
-            <!-- 기준일 한 줄 (항상 가로) -->
-            <div class="student-date-filter" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:nowrap;overflow:hidden;">
-                <label style="font-size:13px;font-weight:600;color:#374151;white-space:nowrap;flex-shrink:0;">📅 기준일:</label>
-                <input type="date" id="studentDateFilter" style="padding:8px 10px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;cursor:pointer;min-width:0;flex:1;" onchange="onStudentDateChange()">
-                <span id="studentDateRangeLabel" style="font-size:12px;color:#6366f1;font-weight:600;background:#eef2ff;padding:4px 8px;border-radius:12px;white-space:nowrap;flex-shrink:0;"></span>
-                <button class="btn btn-sm" style="background:#f3f4f6;color:#374151;border:none;padding:7px 10px;font-size:12px;white-space:nowrap;flex-shrink:0;" onclick="resetStudentDate()">오늘</button>
+            <!-- 기간 선택 -->
+            <div class="student-date-filter" style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+                <div style="display:flex;gap:4px;">
+                    <button class="period-btn active" id="studentPeriodBtn7" onclick="setStudentPeriod('7')">7일</button>
+                    <button class="period-btn" id="studentPeriodBtn14" onclick="setStudentPeriod('14')">14일</button>
+                    <button class="period-btn" id="studentPeriodBtn30" onclick="setStudentPeriod('30')">1개월</button>
+                    <button class="period-btn" id="studentPeriodBtnCustom" onclick="setStudentPeriod('custom')">직접설정</button>
+                </div>
+                <div id="studentNormalDateDiv" style="display:flex;align-items:center;gap:6px;">
+                    <label style="font-size:13px;font-weight:600;color:#374151;white-space:nowrap;">📅 기준일:</label>
+                    <input type="date" id="studentDateFilter" style="padding:8px 10px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;cursor:pointer;" onchange="onStudentDateChange()">
+                    <button class="btn btn-sm" style="background:#f3f4f6;color:#374151;border:none;padding:7px 10px;font-size:12px;white-space:nowrap;" onclick="resetStudentDate()">오늘</button>
+                </div>
+                <div id="studentCustomDateDiv" style="display:none;align-items:center;gap:6px;">
+                    <label style="font-size:13px;font-weight:600;color:#374151;white-space:nowrap;">📅 시작일:</label>
+                    <input type="date" id="studentStartDate" style="padding:8px 10px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;" onchange="onStudentDateChange()">
+                    <span style="color:#6b7280;">~</span>
+                    <label style="font-size:13px;font-weight:600;color:#374151;white-space:nowrap;">종료일:</label>
+                    <input type="date" id="studentEndDate" style="padding:8px 10px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;" onchange="onStudentDateChange()">
+                </div>
+                <span id="studentDateRangeLabel" style="font-size:12px;color:#6366f1;font-weight:600;background:#eef2ff;padding:4px 8px;border-radius:12px;white-space:nowrap;"></span>
             </div>
             <div class="filter-buttons" style="align-items:center;">
                 <button class="filter-btn active" id="filterAll" onclick="clearAllFilters()">전체 보기 <span class="badge" id="badgeAll">0</span></button>
-                <!-- 오늘 기록 드롭다운 -->
-                <div class="analysis-dropdown-wrap" id="todayRecDropWrap">
-                    <button class="analysis-dropdown-btn" id="todayRecDropBtn" onclick="toggleAnalysisDrop('todayRecDrop')">
-                        오늘 기록 <span class="adrop-badge" id="todayRecSelBadge" style="display:none;">0</span> <span style="font-size:10px;">▼</span>
-                    </button>
-                    <div class="analysis-dropdown-menu" id="todayRecDrop">
-                        <div class="adrop-header">오늘 기록 여부</div>
-                        <div class="adrop-item" onclick="toggleTodayRecItem('recorded')"><input type="checkbox" id="chk_recorded"><span class="adrop-dot" style="background:#10b981;"></span>기록<span class="adrop-cnt" id="cntRecorded">0</span></div>
-                        <div class="adrop-item" onclick="toggleTodayRecItem('notRecorded')"><input type="checkbox" id="chk_notRecorded"><span class="adrop-dot" style="background:#d1d5db;"></span>미기록<span class="adrop-cnt" id="cntNotRecorded">0</span></div>
-                        <div class="adrop-divider"></div>
-                        <div class="adrop-footer">
-                            <button class="adrop-footer-btn adrop-clear" onclick="clearTodayRec(event)">초기화</button>
-                        </div>
-                    </div>
-                </div>
+                <button class="filter-btn" id="filterNotRecorded" onclick="toggleSingleFilter('notRecorded')">오늘 미기록 <span class="badge" id="badgeNotRecorded">0</span></button>
 
                 <!-- ☕ 카페인 분석 드롭다운 -->
                 <div class="analysis-dropdown-wrap" id="cafDropWrap">
@@ -1037,27 +1079,27 @@
             </div>
         </div>
         <div class="modal-body">
-            <div class="modal-date-filter">
-                <label>📅 조회 기간 종료일:</label>
-                <input type="date" id="modalEndDate" onchange="refreshModalData()">
-                <button class="btn btn-primary btn-sm" onclick="setModalDateToday()">오늘 기준</button>
+            <div class="modal-date-filter" style="flex-wrap:wrap;gap:8px;">
+                <div style="display:flex;gap:4px;">
+                    <button class="period-btn active" id="modalPeriodBtn7" onclick="setModalPeriod('7')">7일</button>
+                    <button class="period-btn" id="modalPeriodBtn14" onclick="setModalPeriod('14')">14일</button>
+                    <button class="period-btn" id="modalPeriodBtn30" onclick="setModalPeriod('30')">1개월</button>
+                    <button class="period-btn" id="modalPeriodBtnCustom" onclick="setModalPeriod('custom')">직접설정</button>
+                </div>
+                <div id="modalStartDateWrap" style="display:none;align-items:center;gap:4px;">
+                    <label>📅 시작일:</label>
+                    <input type="date" id="modalStartDate" onchange="refreshModalData()">
+                    <span style="color:#6b7280;">~</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <label id="modalEndDateLabel">📅 종료일:</label>
+                    <input type="date" id="modalEndDate" onchange="refreshModalData()">
+                    <button class="btn btn-primary btn-sm" onclick="setModalDateToday()">오늘 기준</button>
+                </div>
                 <span class="date-range-badge" id="modalDateRangeLabel">-</span>
             </div>
             <div class="modal-actions">
-                <!-- AI 분석 버튼 + 기간 선택 -->
-                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                    <button class="btn btn-green" onclick="requestAIAnalysis()" id="aiBtn">🤖 AI 건강분석</button>
-                    <div style="display:flex;gap:4px;align-items:center;background:#f3f4f6;border-radius:8px;padding:3px 6px;">
-                        <span style="font-size:11px;color:#6b7280;font-weight:600;white-space:nowrap;">분석기간:</span>
-                        <button id="aiPeriodBtn7"  onclick="setAIPeriod(7)"  class="ai-period-btn active-period">7일</button>
-                        <button id="aiPeriodBtn14" onclick="setAIPeriod(14)" class="ai-period-btn">14일</button>
-                        <button id="aiPeriodBtn30" onclick="setAIPeriod(30)" class="ai-period-btn">1개월</button>
-                        <span style="font-size:11px;color:#9ca3af;padding:0 2px;">|</span>
-                        <input type="date" id="aiStartDate" style="font-size:11px;padding:2px 6px;border:1px solid #d1d5db;border-radius:5px;color:#374151;cursor:pointer;" onchange="setAIPeriodCustom()" title="직접 시작일 선택">
-                        <span style="font-size:11px;color:#9ca3af;">~</span>
-                        <span id="aiEndDateLabel" style="font-size:11px;color:#374151;font-weight:600;white-space:nowrap;"></span>
-                    </div>
-                </div>
+                <button class="btn btn-green" onclick="requestAIAnalysis()" id="aiBtn">🤖 AI 건강분석</button>
                 <button class="btn btn-blue" onclick="exportPDF()">📄 PDF 저장</button>
                 <button class="btn" style="background:#f5f3ff;color:#6d28d9;border:none;" onclick="openManualAwardModal('single')">🏅 뱃지 수여</button>
                 <button class="btn" style="background:#ecfdf5;color:#065f46;border:none;" onclick="openMsgSendModal()">📨 메시지 보내기</button>
@@ -1247,7 +1289,33 @@ function updateSleepPreview(){
 
 function getKSTDate(offset=0){const d=new Date(new Date().toLocaleString('en-US',{timeZone:'Asia/Seoul'}));d.setDate(d.getDate()+offset);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 const today=getKSTDate(0),yesterday=getKSTDate(-1);
-function getLast7Dates(e){const a=[];for(let i=6;i>=0;i--){const d=new Date(e+'T00:00:00');d.setDate(d.getDate()-i);a.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));}return a;}
+
+// ── 기간 모드 상태 변수 ────────────────────────────────────────
+let overviewPeriodMode='7', cafPeriodMode='7', sleepPeriodMode='7', studentPeriodMode='7', modalPeriodMode='7';
+
+// ── 날짜 범위 헬퍼 함수 ───────────────────────────────────────
+function getLastNDates(e,n){const a=[];for(let i=n-1;i>=0;i--){const d=new Date(e+'T00:00:00');d.setDate(d.getDate()-i);a.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));}return a;}
+function getLast7Dates(e){return getLastNDates(e,7);}
+function getCustomRange(s,e){const a=[],start=new Date(s+'T00:00:00'),end=new Date(e+'T00:00:00');for(let d=new Date(start);d<=end;d.setDate(d.getDate()+1))a.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));return a.length?a:getLastNDates(e,7);}
+function getPeriodN(mode){return mode==='14'?14:mode==='30'?30:7;}
+function getPeriodLabel(dates){if(!dates||!dates.length)return '-';return dates[0].substring(5)+' ~ '+dates[dates.length-1].substring(5)+' ('+dates.length+'일)';}
+
+// 탭별 날짜 배열 반환
+function getOverviewDates(){if(overviewPeriodMode==='custom'){const s=document.getElementById('overviewStartDate')?.value,e=document.getElementById('overviewEndDate')?.value||today;return s?getCustomRange(s,e):getLastNDates(e,7);}return getLastNDates(today,getPeriodN(overviewPeriodMode));}
+function getCafDates(){if(cafPeriodMode==='custom'){const s=document.getElementById('cafStartDate')?.value,e=document.getElementById('cafEndDate')?.value||today;return s?getCustomRange(s,e):getLastNDates(e,7);}return getLastNDates(document.getElementById('cafDateFilter')?.value||today,getPeriodN(cafPeriodMode));}
+function getSleepDates(){if(sleepPeriodMode==='custom'){const s=document.getElementById('sleepStartDate')?.value,e=document.getElementById('sleepEndDate')?.value||today;return s?getCustomRange(s,e):getLastNDates(e,7);}return getLastNDates(document.getElementById('sleepDateFilter')?.value||today,getPeriodN(sleepPeriodMode));}
+function getStudentDates(){if(studentPeriodMode==='custom'){const s=document.getElementById('studentStartDate')?.value,e=document.getElementById('studentEndDate')?.value||today;return s?getCustomRange(s,e):getLastNDates(e,7);}return getLastNDates(getStudentFilterDate()||today,getPeriodN(studentPeriodMode));}
+function getModalDates(){const endDate=document.getElementById('modalEndDate')?.value||today;if(modalPeriodMode==='custom'){const s=document.getElementById('modalStartDate')?.value;if(s)return getCustomRange(s,endDate);}return getLastNDates(endDate,getPeriodN(modalPeriodMode));}
+
+// 기간 UI 헬퍼 (버튼 active 상태 + 날짜 div 표시/숨김)
+function setPeriodUI(prefix,mode){['7','14','30','custom'].forEach(m=>{const btn=document.getElementById(prefix+'PeriodBtn'+m);if(btn)btn.classList.toggle('active',m===mode);});const nd=document.getElementById(prefix+'NormalDateDiv'),cd=document.getElementById(prefix+'CustomDateDiv');if(nd)nd.style.display=mode==='custom'?'none':'flex';if(cd)cd.style.display=mode==='custom'?'flex':'none';}
+
+// 기간 선택 함수
+function setOverviewPeriod(mode){overviewPeriodMode=mode;setPeriodUI('overview',mode);const cd=document.getElementById('overviewCustomDateDiv');if(cd)cd.style.display=mode==='custom'?'flex':'none';updateDashboard();}
+function setCafPeriod(mode){cafPeriodMode=mode;setPeriodUI('caf',mode);updateCaffeineTab();}
+function setSleepPeriod(mode){sleepPeriodMode=mode;setPeriodUI('sleep',mode);updateSleepTab();}
+function setStudentPeriod(mode){studentPeriodMode=mode;setPeriodUI('student',mode);onStudentDateChange();}
+function setModalPeriod(mode){modalPeriodMode=mode;['7','14','30','custom'].forEach(m=>{const btn=document.getElementById('modalPeriodBtn'+m);if(btn)btn.classList.toggle('active',m===mode);});const wrap=document.getElementById('modalStartDateWrap');if(wrap)wrap.style.display=mode==='custom'?'flex':'none';refreshModalData();}
 
 function getLimit(id){if(S.cafMaxFixed>0)return S.cafMaxFixed;const i=infoData.find(i=>i.학번===id);return Math.min((i?i.몸무게:60)*2.5,400);}
 
@@ -1305,7 +1373,7 @@ function loadDataFromSheet(){
             try{
                 if(!result.success)throw new Error(result.error||'데이터 로드 실패');
                 studentsData=(result.students||[]).map(s=>({학번:String(s.학번),이름:String(s.이름),학년:String(s.학년),반:String(s.반),번호:String(s.번호)}));
-                caffeineData=(result.caffeine||[]).map(c=>({학번:String(c.학번),음료명:String(c.음료명||''),함량:parseFloat(c.함량)||0,섭취시간:String(c.섭취시간||''),섭취이유:String(c.섭취이유||'')}));
+                caffeineData=(result.caffeine||[]).map(c=>({학번:String(c.학번),음료명:String(c.음료명||''),함량:parseFloat(c.함량)||0,섭취시간:String(c.섭취시간||''),이유:String(c.이유||'')}));
                 sleepData=(result.sleep||[]).map(s=>({학번:String(s.학번),날짜:String(s.날짜||''),취침:String(s.취침||''),기상:String(s.기상||''),시간:parseFloat(s.시간)||0,컨디션:String(s['수면 후 컨디션']||''),메모:String(s.메모||'')}));
                 infoData=(result.info||[]).map(i=>({학번:String(i.학번),몸무게:parseFloat(i.몸무게)||60}));
 
@@ -1556,13 +1624,22 @@ function initFilters(){
 
     // 분석 탭 날짜 초기화
     ['cafDateFilter','sleepDateFilter'].forEach(id=>{const el=document.getElementById(id);if(el){el.value=today;el.max=today;}});
+    // 커스텀 기간 날짜 초기화 (종료일=오늘, 시작일=7일 전)
+    const weekAgo=getLastNDates(today,7)[0];
+    ['cafEndDate','sleepEndDate','studentEndDate','overviewEndDate'].forEach(id=>{const el=document.getElementById(id);if(el){if(!el.value)el.value=today;el.max=today;}});
+    ['cafStartDate','sleepStartDate','studentStartDate','overviewStartDate','modalStartDate'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=weekAgo;});
 }
 function switchTab(n,el){document.querySelectorAll('.tab-button').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));if(el)el.classList.add('active');document.getElementById('tab-'+n).classList.add('active');if(n==='inquiries'){inquiryFilter='unanswered';loadInquiries();loadSentMessages();}if(n==='awards'){renderAwardsTab();}}
 
 function updateDashboard(){
     const g=msGet('gradeFilter'), c=msGet('classFilter');
     let f=studentsData;if(g)f=f.filter(s=>g.has(normalizeGrade(s.학년)));if(c)f=f.filter(s=>c.has(normalizeClass(s.반)));
-    const dates7=getLast7Dates(today);
+    const dates7=getOverviewDates();
+    const daysText=dates7.length+'일';
+    ['overviewCafTitle','overviewSleepTitle'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=daysText;});
+    const lbl=document.getElementById('overviewDateRangeLabel');if(lbl)lbl.textContent=getPeriodLabel(dates7);
+    const cwd=document.getElementById('cafWarningDetail');if(cwd)cwd.textContent=daysText+' 평균 권장량 초과';
+    const swd=document.getElementById('sleepWarningDetail');if(swd)swd.textContent=daysText+' 평균 '+S.sleepSevere+'시간 미만';
     let nr=0,cw=0,sw=0;
     f.forEach(s=>{
         // ⭐ '카페인 섭취 안 함' 기록이 있으면 미기록으로 카운트하지 않음
@@ -1593,19 +1670,16 @@ function updateDashboard(){
         // ✅ 수정: sleepSevere 이상 ~ sleepWarn 미만은 일반 수면 부족 알림
         else if(as>0&&as>=S.sleepSevere&&as<S.sleepWarn)sl.push(`⚠️ ${s.이름} (${s.학번}): 평균 ${as.toFixed(1)}시간`);
     });
-    if(dl.length)div.innerHTML+=`<div class="alert alert-danger"><div style="font-size:20px;">⚠️</div><div><strong>7일 평균 카페인 초과</strong><br><br>${dl.join('<br>')}</div></div>`;
-    if(ssl.length)div.innerHTML+=`<div class="alert alert-danger"><div style="font-size:20px;">🚨</div><div><strong>7일 평균 심각한 수면 부족 (${S.sleepSevere}시간 미만)</strong><br><small style="font-weight:400;">집중력 저하, 우울·자살생각 위험 증가 등 고위험 수준입니다.</small><br><br>${ssl.join('<br>')}</div></div>`;
-    if(sl.length)div.innerHTML+=`<div class="alert alert-warning"><div style="font-size:20px;">😴</div><div><strong>7일 평균 수면 부족 (${S.sleepSevere}시간 이상 ~ ${S.sleepWarn}시간 미만)</strong><br><br>${sl.join('<br>')}</div></div>`;
+    if(dl.length)div.innerHTML+=`<div class="alert alert-danger"><div style="font-size:20px;">⚠️</div><div><strong>${daysText} 평균 카페인 초과</strong><br><br>${dl.join('<br>')}</div></div>`;
+    if(ssl.length)div.innerHTML+=`<div class="alert alert-danger"><div style="font-size:20px;">🚨</div><div><strong>${daysText} 평균 심각한 수면 부족 (${S.sleepSevere}시간 미만)</strong><br><small style="font-weight:400;">집중력 저하, 우울·자살생각 위험 증가 등 고위험 수준입니다.</small><br><br>${ssl.join('<br>')}</div></div>`;
+    if(sl.length)div.innerHTML+=`<div class="alert alert-warning"><div style="font-size:20px;">😴</div><div><strong>${daysText} 평균 수면 부족 (${S.sleepSevere}시간 이상 ~ ${S.sleepWarn}시간 미만)</strong><br><br>${sl.join('<br>')}</div></div>`;
 }
 
 function getCafTabFilter(){
-    const d=document.getElementById('cafDateFilter');
     const gv=msGet('cafGradeFilter'), cv=msGet('cafClassFilter');
-    const baseDate=d&&d.value?d.value:today;
-    const dates=getLast7Dates(baseDate);
-    // 범위 레이블 업데이트
+    const dates=getCafDates();
     const lbl=document.getElementById('cafDateRangeLabel');
-    if(lbl)lbl.textContent=dates[0].substring(5)+' ~ '+dates[6].substring(5);
+    if(lbl)lbl.textContent=getPeriodLabel(dates);
     let students=studentsData;
     if(gv)students=students.filter(s=>gv.has(normalizeGrade(s.학년)));
     if(cv)students=students.filter(s=>cv.has(normalizeClass(s.반)));
@@ -1625,6 +1699,8 @@ function resetSleepDate(){
 }
 function updateCaffeineTab(){
     const {students,dates,filteredCaf,ids}=getCafTabFilter();
+    const daysText=dates.length+'일';
+    ['cafChartLabel1','cafChartLabel2','cafChartLabel3'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=daysText;});
     const l7=dates.map(d=>d.substring(5));
     // 일별 평균 카페인
     const da=dates.map(d=>{const v=filteredCaf.filter(c=>c.섭취시간.startsWith(d));return v.length?Math.round(v.reduce((a,b)=>a+b.함량,0)/(students.length||1)):0;});
@@ -1669,31 +1745,66 @@ function updateCaffeineTab(){
         type:'bar',data:{labels:ph.map(h=>h+'시'),datasets:[{label:'섭취 횟수',data:ph.map(h=>hm[h]),backgroundColor:'rgba(239,68,68,0.7)',borderWidth:0,borderRadius:4}]},
         options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}
     });
-    // 섭취 이유 분포
-    const rm={};filteredCaf.forEach(c=>{const r=(c.섭취이유||'').trim();if(r)rm[r]=(rm[r]||0)+1;});
-    const reasonEmpty=document.getElementById('cafReasonEmpty');
-    if(charts.cr)charts.cr.destroy();
-    if(Object.keys(rm).length===0){
-        reasonEmpty.style.display='block';
-        document.getElementById('cafReasonChart').style.display='none';
+
+    // ── 섭취 이유 분포 차트 ──────────────────────────────
+    const reasonMap = {};
+    filteredCaf.forEach(c => {
+        if (!c.이유 || !c.이유.trim()) return;
+        // 쉼표 또는 슬래시로 구분된 복수 이유 지원
+        c.이유.split(/[,\/]/).forEach(r => {
+            const t = r.trim();
+            if (t) reasonMap[t] = (reasonMap[t] || 0) + 1;
+        });
+    });
+    const reasonEntries = Object.entries(reasonMap).sort((a,b) => b[1]-a[1]);
+    const noDataEl  = document.getElementById('cafReasonNoData');
+    const wrapEl    = document.getElementById('cafReasonWrap');
+    if (reasonEntries.length === 0) {
+        if (noDataEl) noDataEl.style.display = 'block';
+        if (wrapEl)   wrapEl.style.display   = 'none';
     } else {
-        reasonEmpty.style.display='none';
-        document.getElementById('cafReasonChart').style.display='block';
-        const rd=Object.entries(rm).sort((a,b)=>b[1]-a[1]);
-        charts.cr=new Chart(document.getElementById('cafReasonChart').getContext('2d'),{
-            type:'bar',
-            data:{labels:rd.map(d=>d[0]),datasets:[{label:'횟수',data:rd.map(d=>d[1]),backgroundColor:['#6366f1','#8b5cf6','#ec4899','#ef4444','#f59e0b','#10b981','#3b82f6','#06b6d4','#f97316','#0d9488'],borderWidth:0,borderRadius:6}]},
-            options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.raw}회`}}},scales:{x:{beginAtZero:true,ticks:{stepSize:1}}}}
+        if (noDataEl) noDataEl.style.display = 'none';
+        if (wrapEl)   wrapEl.style.display   = 'block';
+        const palette = ['#6366f1','#8b5cf6','#ec4899','#ef4444','#f59e0b','#10b981','#3b82f6','#06b6d4','#84cc16','#f97316'];
+        if (charts.cr) charts.cr.destroy();
+        charts.cr = new Chart(document.getElementById('cafReasonChart').getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: reasonEntries.map(e => e[0]),
+                datasets: [{
+                    label: '선택 횟수',
+                    data:  reasonEntries.map(e => e[1]),
+                    backgroundColor: reasonEntries.map((_,i) => palette[i % palette.length] + 'cc'),
+                    borderColor:     reasonEntries.map((_,i) => palette[i % palette.length]),
+                    borderWidth: 1,
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ` ${ctx.parsed.x}회`
+                        }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    y: { ticks: { font: { size: 13 } } }
+                }
+            }
         });
     }
 }
 function getSleepTabFilter(){
-    const d=document.getElementById('sleepDateFilter');
     const gv=msGet('sleepGradeFilter'), cv=msGet('sleepClassFilter');
-    const baseDate=d&&d.value?d.value:today;
-    const dates=getLast7Dates(baseDate);
+    const dates=getSleepDates();
     const lbl=document.getElementById('sleepDateRangeLabel');
-    if(lbl)lbl.textContent=dates[0].substring(5)+' ~ '+dates[6].substring(5);
+    if(lbl)lbl.textContent=getPeriodLabel(dates);
     let students=studentsData;
     if(gv)students=students.filter(s=>gv.has(normalizeGrade(s.학년)));
     if(cv)students=students.filter(s=>cv.has(normalizeClass(s.반)));
@@ -1703,6 +1814,8 @@ function getSleepTabFilter(){
 }
 function updateSleepTab(){
     const {students,dates,filteredSleep,ids}=getSleepTabFilter();
+    const daysText=dates.length+'일';
+    ['sleepChartLabel1','sleepChartLabel2'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=daysText;});
     // 취침 시간 분포
     const bm={};filteredSleep.forEach(s=>{if(s.취침){const h=extractSleepHour(s.취침);if(h)bm[h]=(bm[h]||0)+1;}});
     const bh=['20','21','22','23','00','01','02'];
@@ -1753,8 +1866,112 @@ function updateSleepTab(){
         data:{labels:Object.keys(dm2),datasets:[{data:Object.values(dm2),backgroundColor:['#ef4444','#f97316','#10b981','#8b5cf6']}]},
         options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right'}}}
     });
-    // 빠른 워드클라우드 자동 갱신
-    renderQuickWordCloud();
+
+    // ── 수면 메모 워드클라우드 ─────────────────────────────
+    const stopWords = new Set(['이','가','은','는','을','를','의','에','에서','도','와','과','로','으로','한','하고','있다','없다','너무','그냥','좀','잘','더','안','못','것','거','수','때','적','많','있','없','하다','되다','같다','싶다','아','어','고','서','나','그','다','들','를','에서','부터','까지','만','보다','하지만','그리고','그래서','하지만','또','다시','계속','오늘','어제']);
+    const wordMap = {};
+    filteredSleep.forEach(s => {
+        if (!s.메모 || !s.메모.trim()) return;
+        s.메모.trim().split(/[\s,\.!?~\-]+/).forEach(w => {
+            const t = w.replace(/[^가-힣a-zA-Z0-9]/g, '');
+            if (t.length < 2 || stopWords.has(t)) return;
+            wordMap[t] = (wordMap[t] || 0) + 1;
+        });
+    });
+    const wordList = Object.entries(wordMap).sort((a,b)=>b[1]-a[1]).slice(0,60);
+    // AI 분류용으로 단어 목록 전역 저장
+    window._sleepWordList = wordList;
+    const noDataEl2 = document.getElementById('sleepMemoNoData');
+    const wrapEl2   = document.getElementById('sleepMemoWrap');
+    const aiArea    = document.getElementById('sleepMemoAiArea');
+    const aiResult  = document.getElementById('sleepMemoAiResult');
+    if (wordList.length === 0) {
+        if (noDataEl2) noDataEl2.style.display = 'block';
+        if (wrapEl2)   wrapEl2.style.display   = 'none';
+        if (aiArea)    aiArea.style.display     = 'none';
+    } else {
+        if (noDataEl2) noDataEl2.style.display = 'none';
+        if (wrapEl2)   wrapEl2.style.display   = 'flex';
+        if (aiArea)    aiArea.style.display     = 'block';
+        if (aiResult)  { aiResult.style.display = 'none'; aiResult.innerHTML = ''; }
+        const maxCnt = wordList[0][1];
+        const minPx = 13, maxPx = 50;
+        const colors = ['#6366f1','#8b5cf6','#ec4899','#ef4444','#f59e0b','#10b981','#3b82f6','#06b6d4','#f97316','#84cc16'];
+        // 시드 기반 색상으로 같은 단어는 항상 같은 색
+        const getColor = word => colors[word.split('').reduce((a,c)=>a+c.charCodeAt(0),0) % colors.length];
+        wrapEl2.innerHTML = wordList.map(([word, cnt]) => {
+            const size   = Math.round(minPx + ((cnt / maxCnt) * (maxPx - minPx)));
+            const weight = cnt > 1 ? 700 : 500;
+            const opacity = 0.75 + (cnt / maxCnt) * 0.25;
+            return `<span title="${word}: ${cnt}회" style="font-size:${size}px;font-weight:${weight};color:${getColor(word)};opacity:${opacity.toFixed(2)};line-height:1.4;cursor:default;transition:transform .15s;display:inline-block;padding:1px 3px;"
+                onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform=''">${word}</span>`;
+        }).join('');
+    }
+}
+
+// ── AI 수면 메모 단어 분류 ─────────────────────────────────────
+async function aiGroupSleepWords() {
+    const btn = document.getElementById('sleepMemoAiBtn');
+    const resultEl = document.getElementById('sleepMemoAiResult');
+    const wordList = window._sleepWordList || [];
+    if (wordList.length === 0) return;
+
+    // 버튼 로딩 상태
+    btn.disabled = true;
+    btn.innerHTML = '⏳ AI 분류 중...';
+    btn.style.opacity = '0.7';
+    resultEl.style.display = 'none';
+
+    try {
+        const words = wordList.map(([w]) => w);
+        const res = await new Promise((resolve, reject) => {
+            google.script.run
+                .withSuccessHandler(resolve)
+                .withFailureHandler(reject)
+                .analyzeSleepMemoWords(words);
+        });
+
+        if (!res || !res.success) {
+            resultEl.innerHTML = `<p style="text-align:center;color:#ef4444;font-size:13px;">⚠️ 분류 실패: ${(res && res.error) || '알 수 없는 오류'}</p>`;
+            resultEl.style.display = 'block';
+            return;
+        }
+
+        const categories = res.data;
+        const catColors = [
+            { bg:'#ede9fe', border:'#c4b5fd', text:'#5b21b6', badge:'#7c3aed' },
+            { bg:'#fce7f3', border:'#fbcfe8', text:'#9d174d', badge:'#db2777' },
+            { bg:'#fef3c7', border:'#fde68a', text:'#92400e', badge:'#d97706' },
+            { bg:'#d1fae5', border:'#a7f3d0', text:'#065f46', badge:'#059669' },
+            { bg:'#dbeafe', border:'#bfdbfe', text:'#1e3a8a', badge:'#2563eb' },
+        ];
+
+        let html = '<div style="display:flex;flex-wrap:wrap;gap:12px;">';
+        Object.entries(categories).forEach(([catName, catWords], i) => {
+            const c = catColors[i % catColors.length];
+            const chips = catWords.map(w =>
+                `<span style="background:white;border-radius:20px;padding:3px 10px;font-size:12px;color:${c.text};box-shadow:0 1px 3px rgba(0,0,0,0.1);white-space:nowrap;">${w}</span>`
+            ).join('');
+            html += `
+            <div style="flex:1;min-width:160px;background:${c.bg};border:1.5px solid ${c.border};border-radius:14px;padding:12px 14px;">
+                <div style="font-size:12px;font-weight:800;color:${c.badge};margin-bottom:8px;">📌 ${catName} <span style="font-size:10px;font-weight:500;opacity:0.75;">(${catWords.length}개)</span></div>
+                <div style="display:flex;flex-wrap:wrap;gap:5px;">${chips}</div>
+            </div>`;
+        });
+        html += '</div>';
+        html += '<p style="text-align:center;font-size:11px;color:#9ca3af;margin-top:10px;">🤖 Gemini AI가 자동 분류한 결과입니다</p>';
+
+        resultEl.innerHTML = html;
+        resultEl.style.display = 'block';
+
+    } catch (err) {
+        resultEl.innerHTML = `<p style="text-align:center;color:#ef4444;font-size:13px;">⚠️ 오류: ${err.message || err}</p>`;
+        resultEl.style.display = 'block';
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '🤖 AI로 단어 분류하기';
+        btn.style.opacity = '1';
+    }
 }
 
 function getStudentFilterDate(){
@@ -1762,10 +1979,9 @@ function getStudentFilterDate(){
     return(el&&el.value)?el.value:today;
 }
 function onStudentDateChange(){
-    const fd=getStudentFilterDate();
-    const d7=getLast7Dates(fd);
+    const d7=getStudentDates();
     const el=document.getElementById('studentDateRangeLabel');
-    if(el)el.textContent=d7[0].substring(5)+' ~ '+d7[6].substring(5);
+    if(el)el.textContent=getPeriodLabel(d7);
     filterStudents();
 }
 function resetStudentDate(){
@@ -1779,18 +1995,12 @@ function filterStudents(){
     let f=studentsData;if(gv)f=f.filter(s=>gv.has(normalizeGrade(s.학년)));if(cv)f=f.filter(s=>cv.has(s.반));
     if(sv)f=f.filter(s=>s.학번.includes(sv)||s.이름.includes(sv));
     const fd=getStudentFilterDate();
-    const d7=getLast7Dates(fd);
+    const d7=getStudentDates();
     const getRatio=id=>{const ac=avgCafForDates(id,d7);return ac/getLimit(id);};
 
-    // 오늘 기록 드롭다운 필터
-    if(activeFilters.todayRecord.size>0){
-        f=f.filter(s=>{
-            const hasRec=caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(fd))||sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===fd);
-            if(activeFilters.todayRecord.has('recorded')&&activeFilters.todayRecord.has('notRecorded'))return true;
-            if(activeFilters.todayRecord.has('recorded'))return hasRec;
-            if(activeFilters.todayRecord.has('notRecorded'))return !hasRec;
-            return true;
-        });
+    // 단일 필터 (전체보기, 오늘 미기록)
+    if(activeFilters.single==='notRecorded'){
+        f=f.filter(s=>!caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(fd))&&!sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===fd));
         updateBadges();renderStudentGrid(f);return;
     }
 
@@ -1866,11 +2076,10 @@ function filterStudents(){
 }
 function updateBadges(){
     const fd=getStudentFilterDate();
-    const d7=getLast7Dates(fd);
+    const d7=getStudentDates();
     const n=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
     n('badgeAll',studentsData.length);
-    n('cntRecorded',studentsData.filter(s=>caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(fd))||sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===fd)).length);
-    n('cntNotRecorded',studentsData.filter(s=>!caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(fd))&&!sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===fd)).length);
+    n('badgeNotRecorded',studentsData.filter(s=>!caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(fd))&&!sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===fd)).length);
 
     // 카페인 단계별 카운트
     const getCafStage=s=>{
@@ -1909,7 +2118,7 @@ function updateBadges(){
 
     // 뱃지 단계별 카운트
     const fd2=getStudentFilterDate();
-    const d7b=getLast7Dates(fd2);
+    const d7b=getStudentDates();
     // 자동뱃지 4종별 카운트
     n('cntAuto_habit_start',   studentsData.filter(s=>evaluateAwards(s.학번,d7b,fd2).some(a=>a.id==='habit_start')).length);
     n('cntAuto_streak_record', studentsData.filter(s=>evaluateAwards(s.학번,d7b,fd2).some(a=>a.id==='streak_record')).length);
@@ -1935,7 +2144,7 @@ document.addEventListener('click',e=>{
 });
 
 // ── 다중 선택 필터 상태 ──────────────────────────
-const activeFilters={single:'all', caf:new Set(), sleep:new Set(), award:new Set(), todayRecord:new Set()};
+const activeFilters={single:'all', caf:new Set(), sleep:new Set(), award:new Set()};
 
 // 카페인 단계 키 목록
 const CAF_KEYS=['caf0','caf1','caf2','caf3','caf4','caf5','cafNone'];
@@ -1994,9 +2203,8 @@ function _syncAwardUI(){
 
 function toggleCafItem(key){
     activeFilters.single='';
-    activeFilters.todayRecord.clear();
     document.getElementById('filterAll').classList.remove('active');
-    _syncTodayRecUI();
+    document.getElementById('filterNotRecorded').classList.remove('active');
     if(activeFilters.caf.has(key))activeFilters.caf.delete(key);
     else activeFilters.caf.add(key);
     _syncCafUI();
@@ -2005,9 +2213,8 @@ function toggleCafItem(key){
 }
 function toggleSleepItem(key){
     activeFilters.single='';
-    activeFilters.todayRecord.clear();
     document.getElementById('filterAll').classList.remove('active');
-    _syncTodayRecUI();
+    document.getElementById('filterNotRecorded').classList.remove('active');
     if(activeFilters.sleep.has(key))activeFilters.sleep.delete(key);
     else activeFilters.sleep.add(key);
     _syncSleepUI();
@@ -2017,9 +2224,8 @@ function toggleSleepItem(key){
 function selectAllCaf(e){
     e.stopPropagation();
     activeFilters.single='';
-    activeFilters.todayRecord.clear();
     document.getElementById('filterAll').classList.remove('active');
-    _syncTodayRecUI();
+    document.getElementById('filterNotRecorded').classList.remove('active');
     CAF_KEYS.forEach(k=>activeFilters.caf.add(k));
     _syncCafUI();filterStudents();
 }
@@ -2033,9 +2239,8 @@ function clearCaf(e){
 function selectAllSleep(e){
     e.stopPropagation();
     activeFilters.single='';
-    activeFilters.todayRecord.clear();
     document.getElementById('filterAll').classList.remove('active');
-    _syncTodayRecUI();
+    document.getElementById('filterNotRecorded').classList.remove('active');
     SLEEP_KEYS.forEach(k=>activeFilters.sleep.add(k));
     _syncSleepUI();filterStudents();
 }
@@ -2050,9 +2255,8 @@ function clearSleep(e){
 // ── 뱃지 분석 필터 함수 ──────────────────────────────────
 function toggleAwardItem(key){
     activeFilters.single='';
-    activeFilters.todayRecord.clear();
     document.getElementById('filterAll').classList.remove('active');
-    _syncTodayRecUI();
+    document.getElementById('filterNotRecorded').classList.remove('active');
     if(activeFilters.award.has(key))activeFilters.award.delete(key);
     else activeFilters.award.add(key);
     _syncAwardUI();
@@ -2062,9 +2266,8 @@ function toggleAwardItem(key){
 function selectAllAward(e){
     e.stopPropagation();
     activeFilters.single='';
-    activeFilters.todayRecord.clear();
     document.getElementById('filterAll').classList.remove('active');
-    _syncTodayRecUI();
+    document.getElementById('filterNotRecorded').classList.remove('active');
     AWARD_KEYS.forEach(k=>activeFilters.award.add(k));
     _syncAwardUI();filterStudents();
 }
@@ -2076,62 +2279,28 @@ function clearAward(e){
     else filterStudents();
 }
 
-// ── 오늘 기록 드롭다운 함수 ──────────────────────────────────
-function _syncTodayRecUI(){
-    const cnt=activeFilters.todayRecord.size;
-    const btn=document.getElementById('todayRecDropBtn');
-    const badge=document.getElementById('todayRecSelBadge');
-    if(!btn)return;
-    if(cnt>0){
-        btn.classList.add('has-selection');
-        if(badge){badge.style.display='inline';badge.textContent=cnt;}
-    } else {
-        btn.classList.remove('has-selection');
-        if(badge)badge.style.display='none';
-    }
-    ['recorded','notRecorded'].forEach(k=>{
-        const chk=document.getElementById('chk_'+k);
-        if(chk)chk.checked=activeFilters.todayRecord.has(k);
-    });
-}
-function toggleTodayRecItem(key){
-    activeFilters.single='';
-    activeFilters.caf.clear();activeFilters.sleep.clear();activeFilters.award.clear();
-    _syncCafUI();_syncSleepUI();_syncAwardUI();
-    document.getElementById('filterAll').classList.remove('active');
-    if(activeFilters.todayRecord.has(key))activeFilters.todayRecord.delete(key);
-    else activeFilters.todayRecord.add(key);
-    _syncTodayRecUI();
-    if(activeFilters.todayRecord.size===0){clearAllFilters();return;}
-    filterStudents();
-}
-function clearTodayRec(e){
-    e.stopPropagation();
-    activeFilters.todayRecord.clear();
-    _syncTodayRecUI();
-    clearAllFilters();
-}
-
 function clearAllFilters(){
     activeFilters.single='all';
     activeFilters.caf.clear();
     activeFilters.sleep.clear();
     activeFilters.award.clear();
-    activeFilters.todayRecord.clear();
-    _syncCafUI();_syncSleepUI();_syncAwardUI();_syncTodayRecUI();
+    _syncCafUI();_syncSleepUI();_syncAwardUI();
     document.getElementById('filterAll').classList.add('active');
+    document.getElementById('filterNotRecorded').classList.remove('active');
     filterStudents();
 }
 function toggleSingleFilter(type){
     if(activeFilters.single===type){clearAllFilters();return;}
     activeFilters.single=type;
-    activeFilters.caf.clear();activeFilters.sleep.clear();activeFilters.award.clear();activeFilters.todayRecord.clear();
-    _syncCafUI();_syncSleepUI();_syncAwardUI();_syncTodayRecUI();
+    activeFilters.caf.clear();activeFilters.sleep.clear();activeFilters.award.clear();
+    _syncCafUI();_syncSleepUI();_syncAwardUI();
     document.getElementById('filterAll').classList.remove('active');
+    document.getElementById('filterNotRecorded').classList.toggle('active',type==='notRecorded');
     filterStudents();
 }
 function setFilterType(t){
     if(t==='all')clearAllFilters();
+    else if(t==='notRecorded')toggleSingleFilter('notRecorded');
 }
 function updateStudentGrid(){const dtEl=document.getElementById('studentDateFilter');if(dtEl&&!dtEl.value){dtEl.value=today;dtEl.max=today;}onStudentDateChange();}
 function getRecentCaf(id){
@@ -2156,8 +2325,8 @@ function renderStudentGrid(students){
     grid.innerHTML='';
     // ⭐ 학번 오름차순 정렬 (숫자형 학번도 올바르게 정렬)
     students = [...students].sort((a, b) => a.학번.localeCompare(b.학번, undefined, { numeric: true }));
-    const filterDate=document.getElementById('studentDateFilter')?document.getElementById('studentDateFilter').value||today:today;
-    const d7=getLast7Dates(filterDate);
+    const filterDate=studentPeriodMode==='custom'?(document.getElementById('studentEndDate')?.value||today):(document.getElementById('studentDateFilter')?.value||today);
+    const d7=getStudentDates();
     students.forEach(s=>{
         const ac=avgCafForDates(s.학번,d7),as=avgSleepForDates(s.학번,d7),lim=getLimit(s.학번);
         const hasRec=hasCafRecordOnDates(s.학번,d7); // ⭐ 기록 존재 여부
@@ -2173,10 +2342,11 @@ function renderStudentGrid(students){
         const rs=getRecentSleep(s.학번);
         // ⭐ 카페인 표시: 기록 있고 0mg → "카페인 섭취 안 함", 기록 없으면 "미기록"
         let cafDisplay;
-        if(ac>0) cafDisplay=`<span style="color:${cafSt.color};font-weight:600;">${Math.round(ac)}mg</span> <span class="avg-note">(7일 평균)</span>`;
+        const avgNote=`(${d7.length}일 평균)`;
+        if(ac>0) cafDisplay=`<span style="color:${cafSt.color};font-weight:600;">${Math.round(ac)}mg</span> <span class="avg-note">${avgNote}</span>`;
         else if(hasRec) cafDisplay=`<span style="color:#0d9488;font-weight:600;">카페인 섭취 안 함</span>`;
         else cafDisplay='<span style="color:#9ca3af;">미기록</span>';
-        const sleepDisplay=as>0?`<span style="color:${sleepSt.color};font-weight:600;">${as.toFixed(1)}h</span> <span class="avg-note">(7일 평균)</span>`:'<span style="color:#9ca3af;">미기록</span>';
+        const sleepDisplay=as>0?`<span style="color:${sleepSt.color};font-weight:600;">${as.toFixed(1)}h</span> <span class="avg-note">${avgNote}</span>`:'<span style="color:#9ca3af;">미기록</span>';
         const recentCafText=rc.date?`<span class="avg-note">최근: ${rc.date.substring(5)} ${rc.total}mg</span>`:'';
         const recentSleepText=rs?`<span class="avg-note">최근: ${rs.날짜.substring(5)} ${rs.시간}h</span>`:'';
         const card=document.createElement('div');card.className='student-card';card.onclick=()=>openStudentModal(s.학번);
@@ -2205,47 +2375,6 @@ function renderStudentGrid(students){
     });
 }
 
-// ── AI 분석 기간 선택 ────────────────────────────────────────
-// startDate~endDate 사이의 모든 날짜 배열 반환
-function getDatesBetween(startDate, endDate){
-    const arr=[], s=new Date(startDate+'T00:00:00'), e=new Date(endDate+'T00:00:00');
-    for(let d=new Date(s); d<=e; d.setDate(d.getDate()+1)){
-        arr.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
-    }
-    return arr;
-}
-
-let _aiPeriodDays = 7; // 현재 선택된 기간 (0=직접입력)
-
-function setAIPeriod(days){
-    _aiPeriodDays = days;
-    const endDate = document.getElementById('modalEndDate').value || today;
-    const start = new Date(endDate+'T00:00:00');
-    start.setDate(start.getDate() - days + 1);
-    const startStr = start.getFullYear()+'-'+String(start.getMonth()+1).padStart(2,'0')+'-'+String(start.getDate()).padStart(2,'0');
-    document.getElementById('aiStartDate').value = startStr;
-    _updateAIPeriodUI(days, endDate);
-}
-
-function setAIPeriodCustom(){
-    _aiPeriodDays = 0;
-    const endDate = document.getElementById('modalEndDate').value || today;
-    _updateAIPeriodUI(0, endDate);
-}
-
-function _updateAIPeriodUI(activeDays, endDate){
-    [7,14,30].forEach(function(d){
-        document.getElementById('aiPeriodBtn'+d).classList.toggle('active-period', d===activeDays);
-    });
-    document.getElementById('aiEndDateLabel').textContent = (endDate||today).substring(5);
-}
-
-function _initAIPeriod(){
-    const endDate = document.getElementById('modalEndDate').value || today;
-    document.getElementById('aiStartDate').max = today;
-    setAIPeriod(7); // 기본 7일
-}
-
 function openStudentModal(id){
     currentStudentId=id;const s=studentsData.find(st=>st.학번===id);if(!s)return;
     document.getElementById('modalStudentName').textContent=s.이름;
@@ -2253,9 +2382,11 @@ function openStudentModal(id){
     document.getElementById('aiContent').innerHTML='<span style="color:#9ca3af;font-size:14px;">\'🤖 AI 건강분석\' 버튼을 클릭하면 결과가 여기에 표시됩니다.</span>';
     document.getElementById('aiStatusBadge').textContent='(분석 전)';document.getElementById('aiStatusBadge').style.color='#818cf8';
     document.getElementById('aiBoxBody').classList.remove('open');document.getElementById('aiArrow').classList.remove('open');
-    const listDate = document.getElementById('studentDateFilter')?.value || today;
+    const listDate = studentPeriodMode==='custom'?(document.getElementById('studentEndDate')?.value||today):(document.getElementById('studentDateFilter')?.value||today);
+    modalPeriodMode='7';
+    ['7','14','30','custom'].forEach(m=>{document.getElementById('modalPeriodBtn'+m)?.classList.toggle('active',m==='7');});
+    const msw=document.getElementById('modalStartDateWrap');if(msw)msw.style.display='none';
     document.getElementById('modalEndDate').value=listDate;document.getElementById('modalEndDate').max=today;
-    _initAIPeriod();
     refreshModalData();document.getElementById('studentModal').classList.add('active');
 }
 function closeModal(){document.getElementById('studentModal').classList.remove('active');}
@@ -2263,14 +2394,10 @@ window.onclick=e=>{if(e.target===document.getElementById('studentModal'))closeMo
 function setModalDateToday(){document.getElementById('modalEndDate').value=today;refreshModalData();}
 
 function refreshModalData(){
-    const endDate=document.getElementById('modalEndDate').value||today;
-    const dates=getLast7Dates(endDate);
-    const rl=`${dates[0].substring(5)} ~ ${dates[dates.length-1].substring(5)}`;
-    document.getElementById('modalDateRangeLabel').textContent=`📅 ${rl} (7일)`;
+    const dates=getModalDates();
+    const rl=getPeriodLabel(dates);
+    document.getElementById('modalDateRangeLabel').textContent=`📅 ${rl}`;
     document.getElementById('chartRangeLabel').textContent=`(${rl})`;
-    // AI 기간 UI의 종료일 라벨 갱신 + 선택된 기간 유지
-    if(_aiPeriodDays>0) setAIPeriod(_aiPeriodDays);
-    else document.getElementById('aiEndDateLabel').textContent=endDate.substring(5);
     document.getElementById('cafTableRangeLabel').textContent=`(${rl})`;
     document.getElementById('sleepTableRangeLabel').textContent=`(${rl})`;
     const s=studentsData.find(st=>st.학번===currentStudentId);if(!s)return;
@@ -2337,132 +2464,54 @@ function refreshModalData(){
             const statusCell=isLastOfDay
                 ?`<span class="status-badge ${si.cls}">${si.text}</span>`
                 :`<span style="color:#d1d5db;font-size:12px;">-</span>`;
-            const uid=`caf_detail_${i}`;
-            const reason=r.섭취이유&&r.섭취이유.trim()?r.섭취이유.trim():'<span style="color:#9ca3af;">이유 미작성</span>';
-            return `<tr onclick="toggleDetailRow('${uid}')" style="cursor:pointer;" title="클릭하면 섭취 이유 확인"><td>${r.섭취시간}</td><td>${r.음료명}</td><td><strong>${r.함량}mg</strong></td><td style="color:#6b7280;font-size:13px;">${cumul}mg / ${Math.round(lim)}mg</td><td>${statusCell}</td></tr><tr id="${uid}" style="display:none;background:#fef9f0;"><td colspan="5" style="padding:8px 16px;font-size:13px;color:#92400e;">💬 섭취 이유: ${reason}</td></tr>`;
+            const hasReason=r.이유&&r.이유.trim();
+            const reasonId=`cafReason_${i}`;
+            const reasonRow=`<tr id="${reasonId}" style="display:none;background:#fffbf0;">
+                <td colspan="5" style="padding:10px 16px;">
+                    <div style="display:flex;align-items:flex-start;gap:8px;">
+                        <span style="font-size:13px;font-weight:700;color:#f59e0b;flex-shrink:0;">☕ 섭취 이유</span>
+                        <span style="font-size:13px;color:#374151;line-height:1.6;">${hasReason?r.이유:'<span style="color:#9ca3af;">섭취 이유가 입력되지 않았습니다.</span>'}</span>
+                    </div>
+                </td>
+            </tr>`;
+            const mainRow=`<tr style="cursor:pointer;" onclick="(()=>{const m=document.getElementById('${reasonId}');m.style.display=m.style.display==='none'?'table-row':'none';})()" title="클릭하여 섭취 이유 보기">
+                <td>${r.섭취시간}</td>
+                <td>${r.음료명} ${hasReason?'<span style="font-size:10px;color:#d1d5db;">☕</span>':''}</td>
+                <td><strong>${r.함량}mg</strong></td>
+                <td style="color:#6b7280;font-size:13px;">${cumul}mg / ${Math.round(lim)}mg</td>
+                <td>${statusCell}</td>
+            </tr>`;
+            return mainRow+reasonRow;
         }).join('');
 
     const sleepRecords=sleepData.filter(sl=>sl.학번===currentStudentId&&dates.includes(sl.날짜)).sort((a,b)=>b.날짜.localeCompare(a.날짜));
     document.getElementById('modalSleepTable').innerHTML=sleepRecords.length===0
         ?'<tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:20px;">기록 없음</td></tr>'
-        :sleepRecords.map((r,i)=>{const si=getSleepStatusInfo(r.시간);const uid=`slp_detail_${i}`;const memo=r.메모&&r.메모.trim()?r.메모.trim():'<span style="color:#9ca3af;">메모 없음</span>';return `<tr onclick="toggleDetailRow('${uid}')" style="cursor:pointer;" title="클릭하면 수면 메모 확인"><td style="white-space:nowrap">${r.날짜}</td><td style="white-space:nowrap">${formatSleepTime(r.취침)}</td><td style="white-space:nowrap">${formatSleepTime(r.기상)}</td><td><strong style="color:${si.color}">${r.시간}h</strong></td><td style="font-size:18px;">${r.컨디션}</td><td><span class="status-badge ${si.cls}">${si.text}</span></td></tr><tr id="${uid}" style="display:none;background:#f0fdf4;"><td colspan="6" style="padding:8px 16px;font-size:13px;color:#166534;">📝 수면 메모: ${memo}</td></tr>`;}).join('');
-}
-
-function toggleDetailRow(id){const row=document.getElementById(id);if(row)row.style.display=row.style.display==='none'?'table-row':'none';}
-
-// ── 메모 미리보기: updateSleepTab에서 자동 호출 ─────────────
-function renderQuickWordCloud(){
-    const el=document.getElementById('memoPreviewList');if(!el)return;
-    const {filteredSleep,dates}=getSleepTabFilter();
-    const memos=filteredSleep.filter(s=>s.메모&&s.메모.trim()).sort((a,b)=>b.날짜.localeCompare(a.날짜));
-    if(memos.length===0){
-        el.innerHTML='<p style="color:#9ca3af;font-size:13px;text-align:center;padding:20px;">해당 기간에 수면 메모가 없습니다.</p>';
-        document.getElementById('topicAnalysisBtn').disabled=true;
-        return;
-    }
-    document.getElementById('topicAnalysisBtn').disabled=false;
-    // 메모 목록 표시 (최대 30건, 날짜+내용)
-    const shown=memos.slice(0,30);
-    let html=`<div style="font-size:12px;color:#6b7280;margin-bottom:10px;">총 <strong>${memos.length}건</strong> 발견 (최대 30건 표시 · AI 분석에는 전체 사용)</div>`;
-    html+='<div style="display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto;padding-right:4px;">';
-    shown.forEach(s=>{
-        html+=`<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 12px;background:#f9fafb;border-radius:8px;border-left:3px solid #8b5cf6;">
-            <span style="font-size:11px;color:#9ca3af;white-space:nowrap;margin-top:1px;">${s.날짜.substring(5)}</span>
-            <span style="font-size:13px;color:#374151;line-height:1.5;">${s.메모.trim()}</span>
-        </div>`;
-    });
-    if(memos.length>30)html+=`<div style="text-align:center;font-size:12px;color:#9ca3af;padding:6px;">... 외 ${memos.length-30}건</div>`;
-    html+='</div>';
-    el.innerHTML=html;
-}
-
-// ── Gemini AI 주제 분류: 버튼 클릭 ──────────────────────────
-// 메모 배열 대신 필터 파라미터만 전송 → GAS가 시트 직접 조회 (CORS/URL 길이 문제 해결)
-function requestSleepTopicAnalysis(){
-    const {filteredSleep,dates}=getSleepTabFilter();
-    const memos=filteredSleep.filter(s=>s.메모&&s.메모.trim());
-    const btn=document.getElementById('topicAnalysisBtn');
-    const result=document.getElementById('topicAnalysisResult');
-    if(memos.length===0){
-        result.innerHTML='<p style="color:#9ca3af;font-size:13px;">분석할 메모가 없습니다.</p>';return;
-    }
-
-    // 날짜 범위 + 학년/반 필터만 전송 (URL ~80자 수준, GET 안전)
-    const gv=msGet('sleepGradeFilter');
-    const cv=msGet('sleepClassFilter');
-    const filterParams={
-        startDate: dates[0],
-        endDate:   dates[dates.length-1],
-        grades:    gv ? [...gv].filter(function(v){return v!=='all';}) : [],
-        classes:   cv ? [...cv].filter(function(v){return v!=='all';}) : []
-    };
-
-    btn.disabled=true;btn.textContent='⏳ 분석 중...';
-    result.innerHTML='<div style="text-align:center;padding:28px;color:#6b7280;"><div class="spinner" style="margin:0 auto 12px;"></div>Gemini AI가 메모를 읽고 주제를 분류하고 있습니다...</div>';
-    google.script.run
-        .withSuccessHandler(function(res){
-            btn.disabled=false;btn.textContent='🔄 다시 분석';
-            if(!res||!res.groups||res.groups.length===0){
-                const code=res&&res.error?res.error:'UNKNOWN';
-                const detail=res&&res.detail?`<br><span style="font-size:11px;color:#d1d5db;">${res.detail.substring(0,120)}</span>`:'';
-                result.innerHTML=`<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:16px;">
-                    <div style="font-size:13px;font-weight:600;color:#dc2626;margin-bottom:4px;">❌ 분류 실패: ${code}</div>
-                    <div style="font-size:12px;color:#6b7280;">
-                        ${code==='NO_SHEET'?'GAS에서 sleep 시트를 찾을 수 없습니다. 스프레드시트 이름을 확인해 주세요.':''}
-                        ${code&&code.startsWith('API_')?'Gemini API 호출에 실패했습니다. API 키와 배포 상태를 확인해 주세요.':''}
-                        ${code==='PARSE_ERROR'?'AI 응답 형식이 달라 JSON 파싱에 실패했습니다. 재시도해 주세요.':''}
-                        ${code==='NO_CANDIDATE'?'Gemini가 안전 필터로 응답을 차단했습니다.':''}
-                        ${detail}
+        :sleepRecords.map((r,i)=>{
+            const si=getSleepStatusInfo(r.시간);
+            const hasMemo=r.메모&&r.메모.trim();
+            const memoId=`sleepMemo_${i}`;
+            const memoRow=`<tr id="${memoId}" style="display:none;background:#f8f7ff;">
+                <td colspan="6" style="padding:10px 16px;">
+                    <div style="display:flex;align-items:flex-start;gap:8px;">
+                        <span style="font-size:13px;font-weight:700;color:#6366f1;flex-shrink:0;">📝 메모</span>
+                        <span style="font-size:13px;color:#374151;line-height:1.6;">${hasMemo?r.메모:'<span style="color:#9ca3af;">메모 내용이 없습니다.</span>'}</span>
                     </div>
-                    <button onclick="requestSleepTopicAnalysis()" style="margin-top:10px;padding:6px 14px;background:#6366f1;color:white;border:none;border-radius:6px;font-size:12px;cursor:pointer;">🔄 재시도</button>
-                </div>`;
-                return;
-            }
-            renderTopicGroups(result,res.groups,res.memoCount);
-        })
-        .withFailureHandler(function(err){
-            btn.disabled=false;btn.textContent='🔍 AI 주제 분류';
-            result.innerHTML=`<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:16px;">
-                <div style="font-size:13px;font-weight:600;color:#dc2626;">❌ GAS 호출 실패</div>
-                <div style="font-size:12px;color:#6b7280;margin-top:4px;">${err&&err.message?err.message:'알 수 없는 오류'}</div>
-            </div>`;
-        })
-        .analyzeSleepMemosWordCloud(filterParams);
-}
-
-// ── 주제 그룹 렌더링 ─────────────────────────────────────────
-function renderTopicGroups(el,groups,memoCount){
-    const palette=[
-        {bg:'#eef2ff',border:'#6366f1',text:'#3730a3',badge:'#6366f1'},
-        {bg:'#f5f3ff',border:'#8b5cf6',text:'#5b21b6',badge:'#8b5cf6'},
-        {bg:'#fdf2f8',border:'#ec4899',text:'#9d174d',badge:'#ec4899'},
-        {bg:'#fff7ed',border:'#f97316',text:'#9a3412',badge:'#f97316'},
-        {bg:'#ecfdf5',border:'#10b981',text:'#065f46',badge:'#10b981'},
-        {bg:'#eff6ff',border:'#3b82f6',text:'#1e40af',badge:'#3b82f6'},
-        {bg:'#f9fafb',border:'#9ca3af',text:'#374151',badge:'#9ca3af'},
-    ];
-    const total=groups.reduce((s,g)=>s+(g.count||g.sentences?.length||0),0);
-    let html=`<div style="font-size:12px;color:#6b7280;margin-bottom:16px;">메모 <strong>${memoCount}건</strong> · <strong>${groups.length}개</strong> 주제로 분류됨</div>`;
-    html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;">';
-    groups.forEach((g,i)=>{
-        const c=palette[i%palette.length];
-        const cnt=g.count||g.sentences?.length||0;
-        const pct=total>0?Math.round(cnt/total*100):0;
-        html+=`<div style="background:${c.bg};border:1.5px solid ${c.border};border-radius:14px;padding:16px 18px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-                <span style="font-size:14px;font-weight:700;color:${c.text};">${g.topic||'기타'}</span>
-                <span style="background:${c.badge};color:white;font-size:12px;font-weight:700;padding:2px 10px;border-radius:20px;">${cnt}건 · ${pct}%</span>
-            </div>
-            <div style="background:${c.border}22;border-radius:4px;height:4px;margin-bottom:12px;">
-                <div style="background:${c.border};height:4px;border-radius:4px;width:${pct}%;transition:width .6s;"></div>
-            </div>
-            <ul style="margin:0;padding-left:16px;display:flex;flex-direction:column;gap:5px;">
-                ${(g.sentences||[]).map(s=>`<li style="font-size:13px;color:#374151;line-height:1.5;">${s}</li>`).join('')}
-            </ul>
-        </div>`;
-    });
-    html+='</div>';
-    el.innerHTML=html;
+                </td>
+            </tr>`;
+            const mainRow=`<tr style="cursor:pointer;" onclick="(()=>{const m=document.getElementById('${memoId}');m.style.display=m.style.display==='none'?'table-row':'none';})()" title="클릭하여 메모 보기">
+                <td style="white-space:nowrap">${r.날짜}</td>
+                <td style="white-space:nowrap">${formatSleepTime(r.취침)}</td>
+                <td style="white-space:nowrap">${formatSleepTime(r.기상)}</td>
+                <td><strong style="color:${si.color}">${r.시간}h</strong></td>
+                <td style="font-size:18px;">${r.컨디션}</td>
+                <td>
+                    <span class="status-badge ${si.cls}">${si.text}</span>
+                    <span style="font-size:10px;color:#d1d5db;margin-left:4px;">${hasMemo?'📝':''}</span>
+                </td>
+            </tr>`;
+            return mainRow+memoRow;
+        }).join('');
 }
 
 function formatSleepTime(raw){
@@ -2488,11 +2537,7 @@ function toggleAI(){const b=document.getElementById('aiBoxBody'),a=document.getE
 async function requestAIAnalysis(){
     const s=studentsData.find(st=>st.학번===currentStudentId);if(!s)return;
     const endDate=document.getElementById('modalEndDate').value||today;
-    // 선택된 시작일 사용 (없으면 기본 7일)
-    const startDateEl=document.getElementById('aiStartDate');
-    const startDate=startDateEl&&startDateEl.value?startDateEl.value:getLast7Dates(endDate)[0];
-    const dates=getDatesBetween(startDate, endDate);
-    const periodLabel=startDate===endDate?startDate:`${startDate} ~ ${endDate} (${dates.length}일)`;
+    const dates=getModalDates();
     const cafDays=countCafDays(currentStudentId,dates);
     const slpDays=countSleepDays(currentStudentId,dates);
 
@@ -2538,9 +2583,9 @@ async function requestAIAnalysis(){
         name:s.이름,
         weight:info?info.몸무게:60,
         limit:lim,
-        startDate:startDate,
-        endDate:endDate,
-        period:periodLabel,
+        startDate:dates[0],
+        endDate:dates[dates.length-1],
+        period:`${dates[0]} ~ ${dates[dates.length-1]}`,
         caffeineData:{
             avgPerDay:Math.round(avgCaf),
             maxDay:maxCafDay?`${maxCafDay[0]}(${maxCafDay[1]}mg)`:'없음',
@@ -2624,8 +2669,8 @@ ${recommend}
 
 function exportStudentExcel(){
     const fd=getStudentFilterDate();
-    const d7=getLast7Dates(fd);
-    const rangeLabel=d7[0]+' ~ '+d7[6];
+    const d7=getStudentDates();
+    const rangeLabel=d7[0]+' ~ '+d7[d7.length-1];
     
     // 현재 필터 적용된 학생 목록 생성
     const sv=document.getElementById('studentSearchInput').value.toLowerCase();
@@ -2690,7 +2735,7 @@ function exportStudentExcel(){
 // 📊 구글 시트 새 시트로 내보내기
 function exportStudentToSheet(){
     const fd=getStudentFilterDate();
-    const d7=getLast7Dates(fd);
+    const d7=getStudentDates();
 
     const sv=document.getElementById('studentSearchInput').value.toLowerCase();
     const gv=document.getElementById('studentGradeFilter').value,cv=document.getElementById('studentClassFilter').value;
@@ -2778,7 +2823,7 @@ function exportStudentToSheet(){
 function exportPDF(){
     const s=studentsData.find(st=>st.학번===currentStudentId);if(!s)return;
     const endDate=document.getElementById('modalEndDate').value||today;
-    const dates=getLast7Dates(endDate);
+    const dates=getModalDates();
     const lim=getLimit(currentStudentId);
 
     document.getElementById('pdf_title').textContent=`${s.이름} 건강 기록`;
@@ -3121,7 +3166,48 @@ function loadSentMessages() {
                 list.innerHTML = '<div style="text-align:center;padding:30px;color:#9ca3af;"><div style="font-size:28px;margin-bottom:6px;">📤</div><p style="font-size:14px;">발신 메시지가 없습니다.</p></div>';
                 return;
             }
-            list.innerHTML = res.data.map(m => {
+            // 선택 상태 초기화
+            window._sentMsgSelected = new Set();
+            const renderBatchBar = () => {
+                const bar = document.getElementById('sentMsgBatchBar');
+                const cnt = window._sentMsgSelected.size;
+                if (!bar) return;
+                bar.style.display = cnt > 0 ? 'flex' : 'none';
+                const label = bar.querySelector('#batchSelCount');
+                if (label) label.textContent = `${cnt}개 선택됨`;
+                // 전체선택 체크박스 상태 동기화
+                const allCbs = document.querySelectorAll('.sent-msg-cb');
+                const allChk = document.getElementById('sentMsgSelectAll');
+                if (allChk) allChk.checked = allCbs.length > 0 && [...allCbs].every(c => c.checked);
+            };
+
+            // 툴바 렌더
+            const toolbar = `
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 4px;">
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:#6b7280;user-select:none;">
+                  <input type="checkbox" id="sentMsgSelectAll" style="width:15px;height:15px;cursor:pointer;accent-color:#6366f1;"
+                    onchange="(() => {
+                      const checked = this.checked;
+                      document.querySelectorAll('.sent-msg-cb').forEach(cb => {
+                        cb.checked = checked;
+                        const ri = parseInt(cb.dataset.rowindex);
+                        if (checked) window._sentMsgSelected.add(ri);
+                        else window._sentMsgSelected.delete(ri);
+                      });
+                      renderBatchBar();
+                    })()">
+                  전체 선택
+                </label>
+                <div id="sentMsgBatchBar" style="display:none;align-items:center;gap:8px;margin-left:auto;">
+                  <span id="batchSelCount" style="font-size:13px;color:#6b7280;"></span>
+                  <button onclick="confirmBulkDeleteSentMsg()"
+                    style="padding:6px 14px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">
+                    🗑️ 선택 삭제
+                  </button>
+                </div>
+              </div>`;
+
+            list.innerHTML = toolbar + res.data.map(m => {
                 const isRead = m.readStatus === '읽음';
                 const readBadge = isRead
                     ? `<span style="background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:8px;font-size:11px;font-weight:600;">읽음</span>`
@@ -3138,22 +3224,34 @@ function loadSentMessages() {
                            <div style="font-size:10px;color:#93c5fd;margin-top:4px;">${formatMsgDate(m.studentReplyTime)}</div>
                        </div>`
                     : '';
-                return `<div style="border:1px solid ${hasNewReply ? '#fca5a5' : '#e5e7eb'};border-radius:10px;padding:14px 16px;margin-bottom:10px;${hasNewReply ? 'background:#fff5f5;' : ''}">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
-                        <div>
-                            <span style="font-weight:700;font-size:14px;color:#1f2937;">${m.title}</span>
-                            <span style="font-size:12px;color:#6366f1;font-weight:600;margin-left:8px;">→ ${m.studentName} (${m.studentId})</span>
+                const safeTitle = m.title.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+                return `<div style="border:1px solid ${hasNewReply ? '#fca5a5' : '#e5e7eb'};border-radius:10px;padding:14px 16px;margin-bottom:10px;${hasNewReply ? 'background:#fff5f5;' : ''}display:flex;gap:10px;align-items:flex-start;">
+                    <input type="checkbox" class="sent-msg-cb" data-rowindex="${m.rowIndex}"
+                        style="margin-top:3px;width:15px;height:15px;cursor:pointer;accent-color:#6366f1;flex-shrink:0;"
+                        onchange="(()=>{
+                          const ri=${m.rowIndex};
+                          if(this.checked) window._sentMsgSelected.add(ri);
+                          else window._sentMsgSelected.delete(ri);
+                          renderBatchBar();
+                        })()">
+                    <div style="flex:1;min-width:0;">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
+                            <div>
+                                <span style="font-weight:700;font-size:14px;color:#1f2937;">${m.title}</span>
+                                <span style="font-size:12px;color:#6366f1;font-weight:600;margin-left:8px;">→ ${m.studentName} (${m.studentId})</span>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                                ${replyBadge}
+                                ${readBadge}
+                                <button onclick="confirmDeleteSentMsg(${m.rowIndex},'${safeTitle}')"
+                                    style="background:none;border:none;cursor:pointer;color:#d1d5db;font-size:16px;padding:2px 4px;line-height:1;transition:color .15s;"
+                                    onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#d1d5db'" title="삭제">🗑️</button>
+                            </div>
                         </div>
-                        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-                            ${replyBadge}
-                            ${readBadge}
-                            <button onclick="confirmDeleteSentMsg(${m.rowIndex},'${m.title.replace(/'/g,"\\'")}')"
-                                style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:13px;padding:2px 4px;" title="삭제">🗑️</button>
-                        </div>
+                        <div style="font-size:12px;color:#9ca3af;margin-top:4px;">${formatMsgDate(m.timestamp)} ${readTime}</div>
+                        <div style="font-size:13px;color:#374151;margin-top:8px;white-space:pre-wrap;">${m.content}</div>
+                        ${replySection}
                     </div>
-                    <div style="font-size:12px;color:#9ca3af;margin-top:4px;">${formatMsgDate(m.timestamp)} ${readTime}</div>
-                    <div style="font-size:13px;color:#374151;margin-top:8px;white-space:pre-wrap;">${m.content}</div>
-                    ${replySection}
                 </div>`;
             }).join('');
         })
@@ -3162,14 +3260,34 @@ function loadSentMessages() {
 }
 
 function confirmDeleteSentMsg(rowIndex, title) {
-    if (!confirm(`"${title}" 메시지를 삭제하시겠습니까?`)) return;
-    google.script.run
-        .withSuccessHandler(res => {
-            if (res && res.success) { loadSentMessages(); }
-            else { showTeacherModal('❌', '삭제 실패', (res && res.error) || '알 수 없는 오류', 'error'); }
-        })
-        .withFailureHandler(() => showTeacherModal('❌', '오류', 'GAS 연결 실패', 'error'))
-        .deleteTeacherMessage(rowIndex);
+    // confirm() 대신 커스텀 모달 사용 (GAS 웹앱 환경에서 confirm 신뢰성 문제 방지)
+    showTeacherModal('🗑️', '메시지 삭제', `"${title}"<br>메시지를 삭제하시겠습니까?`, 'confirm', () => {
+        google.script.run
+            .withSuccessHandler(res => {
+                if (res && res.success) { loadSentMessages(); }
+                else { showTeacherModal('❌', '삭제 실패', (res && res.error) || '알 수 없는 오류', 'error'); }
+            })
+            .withFailureHandler(() => showTeacherModal('❌', '오류', 'GAS 연결 실패', 'error'))
+            .deleteTeacherMessage(rowIndex);
+    });
+}
+
+function confirmBulkDeleteSentMsg() {
+    const selected = [...(window._sentMsgSelected || [])];
+    if (selected.length === 0) return;
+    showTeacherModal('🗑️', '선택 메시지 삭제', `선택한 <strong>${selected.length}개</strong>의 메시지를 삭제하시겠습니까?`, 'confirm', () => {
+        google.script.run
+            .withSuccessHandler(res => {
+                if (res && res.success) {
+                    window._sentMsgSelected = new Set();
+                    loadSentMessages();
+                } else {
+                    showTeacherModal('❌', '삭제 실패', (res && res.error) || '알 수 없는 오류', 'error');
+                }
+            })
+            .withFailureHandler(() => showTeacherModal('❌', '오류', 'GAS 연결 실패', 'error'))
+            .deleteBulkTeacherMessages(selected);
+    });
 }
 
 // ── 학생 문의 알림 팝업 ──────────────────────────────
@@ -3321,9 +3439,35 @@ function showTeacherConfirm(emoji, title, message, onConfirm) {
     document.getElementById('_confirmOkBtn').onclick = () => { overlay.remove(); onConfirm(); };
 }
 
-function showTeacherModal(emoji, title, message, type) {
+function showTeacherModal(emoji, title, message, type, onConfirmCb) {
     const existing = document.getElementById('teacherAlertModal');
     if (existing) existing.remove();
+
+    // confirm 타입: 취소/확인 두 버튼
+    if (type === 'confirm') {
+        const overlay = document.createElement('div');
+        overlay.id = 'teacherAlertModal';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:2000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);animation:fadeInOverlay 0.2s ease;';
+        overlay.innerHTML = `
+            <div style="background:white;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,0.25);width:340px;overflow:hidden;animation:modalPop 0.25s ease-out;">
+                <div style="background:#ef4444;padding:24px 24px 18px;text-align:center;">
+                    <div style="font-size:44px;margin-bottom:8px;line-height:1;">${emoji}</div>
+                    <div style="font-size:19px;font-weight:700;color:white;">${title}</div>
+                </div>
+                <div style="padding:18px 24px 22px;text-align:center;">
+                    <p style="font-size:14px;color:#374151;line-height:1.7;margin-bottom:18px;">${message}</p>
+                    <div style="display:flex;gap:10px;">
+                        <button id="_tmCancelBtn" style="flex:1;background:#f3f4f6;color:#374151;border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;">취소</button>
+                        <button id="_tmOkBtn" style="flex:1;background:#ef4444;color:white;border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;">삭제</button>
+                    </div>
+                </div>
+            </div>`;
+        overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+        document.body.appendChild(overlay);
+        document.getElementById('_tmCancelBtn').onclick = () => overlay.remove();
+        document.getElementById('_tmOkBtn').onclick = () => { overlay.remove(); if (typeof onConfirmCb === 'function') onConfirmCb(); };
+        return;
+    }
 
     const colors = {
         success: { bg: '#10b981', light: '#ecfdf5', border: '#a7f3d0', text: '#065f46' },
@@ -3669,7 +3813,7 @@ function submitManualAward() {
     updateStudentGrid();
     if (awardModalMode === 'single') {
         const endDate = document.getElementById('modalEndDate')?.value || today;
-        const dates = getLast7Dates(endDate);
+        const dates = getModalDates();
         const chipsEl = document.getElementById('modalAwardChips');
         if (chipsEl) {
             chipsEl.innerHTML = renderAwardChips(currentStudentId, dates, endDate, true)
@@ -3746,7 +3890,7 @@ function _doDeleteManualAward(studentId, idx) {
     updateStudentGrid();
     if (currentStudentId === studentId) {
         const endDate = document.getElementById('modalEndDate')?.value || today;
-        const dates = getLast7Dates(endDate);
+        const dates = getModalDates();
         const chipsEl = document.getElementById('modalAwardChips');
         if (chipsEl) {
             chipsEl.innerHTML = renderAwardChips(currentStudentId, dates, endDate, true)
@@ -3768,7 +3912,7 @@ function _doDeleteManualAward(studentId, idx) {
                     const endDate = document.getElementById('modalEndDate')?.value || today;
                     const chipsEl = document.getElementById('modalAwardChips');
                     if (chipsEl) {
-                        chipsEl.innerHTML = renderAwardChips(currentStudentId, getLast7Dates(endDate), endDate, true)
+                        chipsEl.innerHTML = renderAwardChips(currentStudentId, getModalDates(), endDate, true)
                             || '<span class="award-chip-none">뱃지 없음</span>';
                     }
                 }
