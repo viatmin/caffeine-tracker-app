@@ -514,6 +514,21 @@
                     <span style="font-size:13px;font-weight:700;color:#6366f1;min-width:36px;" id="zoomLabel">100%</span>
                     <button onclick="applyZoom(100);document.getElementById('zoomSlider').value=100;" style="background:#e5e7eb;border:none;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;color:#6b7280;font-weight:600;">초기화</button>
                 </div>
+                <div style="display:flex;align-items:center;gap:8px;background:#f9fafb;padding:8px 14px;border-radius:10px;border:1px solid #e5e7eb;">
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:600;color:#374151;white-space:nowrap;">
+                        <input type="checkbox" id="autoRefreshToggle" onchange="toggleAutoRefresh(this.checked)"
+                            style="width:15px;height:15px;accent-color:#6366f1;cursor:pointer;">
+                        자동 새로고침
+                    </label>
+                    <select id="autoRefreshInterval" onchange="toggleAutoRefresh(document.getElementById('autoRefreshToggle').checked)"
+                        style="padding:4px 8px;border:1.5px solid #e5e7eb;border-radius:6px;font-size:12px;font-weight:600;color:#374151;background:white;cursor:pointer;">
+                        <option value="60000">1분</option>
+                        <option value="180000" selected>3분</option>
+                        <option value="300000">5분</option>
+                        <option value="600000">10분</option>
+                    </select>
+                    <span id="autoRefreshStatus" style="font-size:11px;color:#9ca3af;white-space:nowrap;"></span>
+                </div>
                 <button class="btn btn-primary" onclick="loadDataFromSheet()" id="refreshBtn">🔄 데이터 새로고침</button>
             </div>
         </div>
@@ -818,6 +833,8 @@
                 <input type="text" id="awardSearchInput" placeholder="이름 또는 학번 검색..." oninput="renderAwardsTab()"
                     style="padding:9px 14px;border:2px solid #e5e7eb;border-radius:10px;font-size:14px;width:200px;font-family:inherit;outline:none;"
                     onfocus="this.style.borderColor='#6366f1'" onblur="this.style.borderColor='#e5e7eb'">
+                <button onclick="refreshAwardsTab(this)" style="background:white;color:#6b7280;border:2px solid #e5e7eb;padding:9px 16px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;"
+                    onmouseover="this.style.borderColor='#6366f1';this.style.color='#6366f1'" onmouseout="this.style.borderColor='#e5e7eb';this.style.color='#6b7280'">🔄 새로고침</button>
                 <button onclick="openManualAwardModal('batch')" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;border:none;padding:10px 18px;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;">🏅 일괄 수여</button>
             </div>
         </div>
@@ -1426,6 +1443,26 @@ function countSleepDays(id,dates){return dates.filter(d=>sleepData.some(s=>s.학
 function getYestCaf(id){return caffeineData.filter(c=>c.학번===id&&c.섭취시간.startsWith(yesterday)).reduce((s,c)=>s+c.함량,0);}
 function getTodayCaf(id){return caffeineData.filter(c=>c.학번===id&&c.섭취시간.startsWith(today)).reduce((s,c)=>s+c.함량,0);}
 function getYestSleep(id){const r=sleepData.find(s=>s.학번===id&&s.날짜===yesterday);return r?r.시간:null;}
+
+let _arInterval = null, _arCountdown = null, _arRemain = 0;
+function toggleAutoRefresh(enabled){
+    clearInterval(_arInterval); clearInterval(_arCountdown);
+    _arInterval = _arCountdown = null;
+    const statusEl = document.getElementById('autoRefreshStatus');
+    if(!enabled){ if(statusEl) statusEl.textContent = ''; return; }
+    const ms = parseInt(document.getElementById('autoRefreshInterval')?.value || '180000');
+    _arRemain = ms / 1000;
+    function tick(){ if(statusEl) statusEl.textContent = `다음 갱신 ${_arRemain}초 후`; _arRemain--; }
+    tick();
+    _arCountdown = setInterval(tick, 1000);
+    _arInterval = setInterval(()=>{
+        clearInterval(_arCountdown);
+        loadDataFromSheet();
+        _arRemain = ms / 1000;
+        tick();
+        _arCountdown = setInterval(tick, 1000);
+    }, ms);
+}
 
 function loadDataFromSheet(){
     const btn=document.getElementById('refreshBtn');btn.disabled=true;btn.textContent='⏳ 로딩 중...';
@@ -4007,6 +4044,14 @@ const SYSTEM_BADGE_DEFS = {
 // 현재 뱃지 설정 (localStorage 기반)
 let awardSettings = [];
 
+function refreshAwardsTab(btn){
+    if(btn){btn.disabled=true;btn.textContent='⏳ 갱신 중...';}
+    detectPendingBadges();
+    renderAwardsTab();
+    renderPendingBadges();
+    if(btn){setTimeout(()=>{btn.disabled=false;btn.textContent='🔄 새로고침';},600);}
+}
+
 // ══ 🏅 뱃지 현황 탭 렌더 ══════════════════════════════════
 function renderAwardsTab() {
     const container = document.getElementById('awardsTabContent');
@@ -4546,32 +4591,35 @@ function detectPendingBadges(){
         list.forEach(a=>{const bid=a.badgeId||a.awardId;if(bid)awarded.add(sid+'|'+bid);});
     });
     const dismissed=new Set(dismissedBadges.map(d=>d.studentId+'|'+d.badgeId));
-    // 이미 수여/보류된 항목을 pendingBadges에서 정리
-    const before=pendingBadges.length;
-    pendingBadges=pendingBadges.filter(p=>{const key=p.studentId+'|'+p.badgeId;return !awarded.has(key)&&!dismissed.has(key);});
-    if(pendingBadges.length!==before)savePendingBadges();
+
+    // 챌린지 기간 계산 (미설정 시 전체 데이터 범위로 자동 대체)
+    let cStart=S.challengeStart, cEnd=S.challengeEnd;
+    if(!cStart||!cEnd){
+        const allDates=[...caffeineData.map(c=>c.섭취시간.substring(0,10)),...sleepData.map(sl=>sl.날짜)].filter(Boolean).sort();
+        if(allDates.length){cStart=allDates[0];cEnd=allDates[allDates.length-1];}
+    }
+
+    // 현재 조건 기준으로 pendingBadges 완전 재구성 (설정 변경 시 잘못된 항목 자동 제거)
     const newPending=[];
     studentsData.forEach(s=>{
         challengeBadges.forEach(badge=>{
             const key=s.학번+'|'+badge.id;
             if(awarded.has(key)||dismissed.has(key))return;
-            if(pendingBadges.some(p=>p.studentId===s.학번&&p.badgeId===badge.id))return;
             let achieved=false;
             if(badge.method==='consecutive'){
                 achieved=checkConsecutiveDays(s.학번,badge.type,badge.days,today);
             } else if(badge.method==='cumulative'){
-                let cStart=S.challengeStart, cEnd=S.challengeEnd;
-                if(!cStart||!cEnd){
-                    // 챌린지 기간 미설정 시 전체 데이터 날짜 범위로 자동 대체
-                    const allDates=[...caffeineData.map(c=>c.섭취시간.substring(0,10)),...sleepData.map(sl=>sl.날짜)].filter(Boolean).sort();
-                    if(allDates.length){cStart=allDates[0];cEnd=allDates[allDates.length-1];}
-                }
                 if(cStart&&cEnd) achieved=checkCumulativeDays(s.학번,badge.type,badge.days,cStart,cEnd);
             }
-            if(achieved)newPending.push({studentId:s.학번,badgeId:badge.id,detectedAt:today});
+            if(achieved){
+                // 기존 항목의 detectedAt 유지
+                const existing=pendingBadges.find(p=>p.studentId===s.학번&&p.badgeId===badge.id);
+                newPending.push({studentId:s.학번,badgeId:badge.id,detectedAt:existing?existing.detectedAt:today});
+            }
         });
     });
-    if(newPending.length){pendingBadges.push(...newPending);savePendingBadges();}
+    pendingBadges=newPending;
+    savePendingBadges();
     renderPendingBadges();
 }
 
