@@ -79,17 +79,17 @@
         .analysis-dropdown-btn.has-selection-caf .adrop-badge{background:rgba(220,38,38,0.18);}
         .analysis-dropdown-btn.has-selection-sleep .adrop-badge{background:rgba(124,58,237,0.18);}
         .analysis-dropdown-btn.has-selection-record .adrop-badge{background:rgba(5,150,105,0.18);}
-        .analysis-dropdown-menu{display:none;position:absolute;top:calc(100% + 6px);left:0;background:white;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,0.14);border:1px solid #e5e7eb;z-index:300;min-width:230px;overflow:hidden;padding:8px 0;}
+        .analysis-dropdown-menu{display:none;position:absolute;top:calc(100% + 6px);left:0;background:white;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,0.14);border:1px solid #e5e7eb;z-index:300;min-width:310px;overflow:hidden;padding:10px 0;}
         .analysis-dropdown-menu.open{display:block;}
-        .adrop-header{padding:8px 16px 6px;font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:.05em;}
-        .adrop-item{display:flex;align-items:center;padding:7px 16px;font-size:13px;font-weight:500;color:#374151;cursor:pointer;transition:background 0.15s;gap:10px;user-select:none;}
+        .adrop-header{padding:10px 20px 7px;font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:.05em;}
+        .adrop-item{display:flex;align-items:center;padding:9px 20px;font-size:13px;font-weight:500;color:#374151;cursor:pointer;transition:background 0.15s;gap:12px;user-select:none;}
         .adrop-item:hover{background:#f9fafb;}
-        .adrop-item input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:#6366f1;flex-shrink:0;pointer-events:none;}
-        .adrop-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
-        .adrop-cnt{margin-left:auto;font-size:11px;font-weight:700;padding:1px 7px;border-radius:8px;background:#f3f4f6;color:#6b7280;flex-shrink:0;}
-        .adrop-divider{height:1px;background:#f3f4f6;margin:4px 0;}
-        .adrop-footer{padding:6px 12px 8px;display:flex;gap:8px;}
-        .adrop-footer-btn{flex:1;padding:6px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;transition:background 0.2s;}
+        .adrop-item input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:#6366f1;flex-shrink:0;pointer-events:none;}
+        .adrop-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+        .adrop-cnt{margin-left:auto;font-size:12px;font-weight:700;padding:2px 9px;border-radius:8px;background:#f3f4f6;color:#6b7280;flex-shrink:0;}
+        .adrop-divider{height:1px;background:#f3f4f6;margin:6px 0;}
+        .adrop-footer{padding:8px 14px 10px;display:flex;gap:8px;}
+        .adrop-footer-btn{flex:1;padding:8px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:background 0.2s;}
         .adrop-select-all{background:#eef2ff;color:#4f46e5;}
         .adrop-select-all:hover{background:#e0e7ff;}
         .adrop-clear{background:#f3f4f6;color:#6b7280;}
@@ -4587,9 +4587,9 @@ function rebuildAwardDropdown(){
         const icon=b.image||'🏅';
         const name=b.name||b.id;
         const methodLabel=b.method==='consecutive'
-            ?`<span style="font-size:10px;color:#166534;background:#dcfce7;border-radius:4px;padding:1px 5px;margin-left:4px;">🔁${b.days}일연속</span>`
-            :`<span style="font-size:10px;color:#1e40af;background:#dbeafe;border-radius:4px;padding:1px 5px;margin-left:4px;">📊${b.days}일누적</span>`;
-        div.innerHTML=`<input type="checkbox" id="chk_${key}"><span class="adrop-dot" style="background:#7c3aed;"></span>${icon} ${name}${methodLabel}<span class="adrop-cnt" id="cntBadge_${b.id}">0</span>`;
+            ?`<span style="font-size:10px;color:#166534;background:#dcfce7;border-radius:4px;padding:2px 7px;margin-left:6px;white-space:nowrap;">🔁 ${b.days}일 연속</span>`
+            :`<span style="font-size:10px;color:#1e40af;background:#dbeafe;border-radius:4px;padding:2px 7px;margin-left:6px;white-space:nowrap;">📊 ${b.days}일 누적</span>`;
+        div.innerHTML=`<input type="checkbox" id="chk_${key}"><span class="adrop-dot" style="background:#7c3aed;"></span><span style="flex:1;min-width:0;">${icon} ${name}</span>${methodLabel}<span class="adrop-cnt" id="cntBadge_${b.id}">0</span>`;
         container.appendChild(div);
     });
     if(typeof updateFilterCounts==='function')updateFilterCounts();
