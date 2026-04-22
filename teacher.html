@@ -775,7 +775,7 @@
                 <!-- 🏅 뱃지 분석 드롭다운 -->
                 <div class="analysis-dropdown-wrap" id="awardDropWrap">
                     <button class="analysis-dropdown-btn" id="awardDropBtn" onclick="toggleAnalysisDrop('awardDrop')" style="border-color:#e5e7eb;">
-                        🏅 뱃지 분석 <span class="adrop-badge" id="awardSelBadge" style="display:none;">0</span> <span style="font-size:10px;">▼</span>
+                        <span id="awardDropBtnText">🏅 뱃지 분석</span> <span class="adrop-badge" id="awardSelBadge" style="display:none;">0</span> <span style="font-size:10px;">▼</span>
                     </button>
                     <div class="analysis-dropdown-menu" id="awardDrop">
                         <div class="adrop-header">오늘 기록 뱃지 (자동)</div>
@@ -783,7 +783,7 @@
                         <div class="adrop-item" onclick="toggleAwardItem('auto_today_sleep')"><input type="checkbox" id="chk_auto_today_sleep"><span class="adrop-dot" style="background:#2563eb;"></span>😴 수면 오늘 기록<span class="adrop-cnt" id="cntAuto_today_sleep">0</span></div>
                         <div class="adrop-divider"></div>
                         <div class="adrop-header">교사 수여 뱃지</div>
-                        <div class="adrop-item" onclick="toggleAwardItem('awardTeacher')"><input type="checkbox" id="chk_awardTeacher"><span class="adrop-dot" style="background:#6366f1;"></span>🏅 수여 있음<span class="adrop-cnt" id="cntAwardTeacher">0</span></div>
+                        <div id="awardBadgeItems"><!-- dynamically populated --></div>
                         <div class="adrop-item" onclick="toggleAwardItem('awardNoTeacher')"><input type="checkbox" id="chk_awardNoTeacher"><span class="adrop-dot" style="background:#e5e7eb;"></span>수여 없음<span class="adrop-cnt" id="cntAwardNoTeacher">0</span></div>
                         <div class="adrop-divider"></div>
                         <div class="adrop-footer">
@@ -2146,11 +2146,21 @@ function filterStudents(){
                 const af=activeFilters.award;
                 const hasTodayCaf=caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(fd));
                 const hasTodaySleep=sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===fd);
-                const hasTeacher=getManualAwardsFor(s.학번).length>0;
-                const autoMatch=(af.has('auto_today_caf')&&hasTodayCaf)||(af.has('auto_today_sleep')&&hasTodaySleep);
-                const teacherMatch=(af.has('awardTeacher')&&hasTeacher)||(af.has('awardNoTeacher')&&!hasTeacher);
+                const sAwards=getManualAwardsFor(s.학번);
+                // 자동 뱃지 그룹 (OR)
                 const hasAutoFilter=af.has('auto_today_caf')||af.has('auto_today_sleep');
-                const hasTeachFilter=af.has('awardTeacher')||af.has('awardNoTeacher');
+                const autoMatch=(af.has('auto_today_caf')&&hasTodayCaf)||(af.has('auto_today_sleep')&&hasTodaySleep);
+                // 교사 수여 뱃지 그룹 (OR): 개별 badge_* + 수여없음
+                const badgeKeys=[...af].filter(k=>k.startsWith('badge_'));
+                const hasTeachFilter=badgeKeys.length>0||af.has('awardNoTeacher');
+                let teacherMatch=false;
+                if(badgeKeys.length>0){
+                    teacherMatch=teacherMatch||badgeKeys.some(k=>{
+                        const bid=k.replace('badge_','');
+                        return sAwards.some(a=>(a.awardId||a.badgeId)===bid);
+                    });
+                }
+                if(af.has('awardNoTeacher'))teacherMatch=teacherMatch||(sAwards.length===0);
                 if(hasAutoFilter&&hasTeachFilter)awardMatch=autoMatch&&teacherMatch;
                 else if(hasAutoFilter)awardMatch=autoMatch;
                 else if(hasTeachFilter)awardMatch=teacherMatch;
@@ -2209,8 +2219,13 @@ function updateBadges(){
     const fd2=getStudentFilterDate();
     n('cntAuto_today_caf',   studentsData.filter(s=>caffeineData.some(c=>c.학번===s.학번&&c.섭취시간.startsWith(fd2))).length);
     n('cntAuto_today_sleep', studentsData.filter(s=>sleepData.some(sl=>sl.학번===s.학번&&sl.날짜===fd2)).length);
-    n('cntAwardTeacher',     studentsData.filter(s=>getManualAwardsFor(s.학번).length>0).length);
     n('cntAwardNoTeacher',   studentsData.filter(s=>getManualAwardsFor(s.학번).length===0).length);
+    // 개별 뱃지별 카운트
+    challengeBadges.forEach(b=>{
+        const el=document.getElementById('cntBadge_'+b.id);
+        if(!el)return;
+        el.textContent=studentsData.filter(s=>getManualAwardsFor(s.학번).some(a=>(a.awardId||a.badgeId)===b.id)).length;
+    });
 }
 // 드롭다운 토글
 function toggleAnalysisDrop(id){
@@ -2232,7 +2247,10 @@ const activeFilters={single:'all', caf:new Set(), sleep:new Set(), award:new Set
 // 카페인 단계 키 목록
 const CAF_KEYS=['caf0','caf1','caf2','caf3','caf4','caf5','cafNone'];
 const SLEEP_KEYS=['sleepSevere','sleepBad','sleepGood','sleepExcess','sleepNone'];
-const AWARD_KEYS=['auto_today_caf','auto_today_sleep','awardTeacher','awardNoTeacher'];
+const AWARD_KEYS_STATIC=['auto_today_caf','auto_today_sleep','awardNoTeacher'];
+function getAwardKeys(){return[...AWARD_KEYS_STATIC,...challengeBadges.map(b=>'badge_'+b.id)];}
+// legacy alias
+const AWARD_KEYS=AWARD_KEYS_STATIC;
 
 function _syncCafUI(){
     const cnt=activeFilters.caf.size;
@@ -2270,10 +2288,32 @@ function _syncAwardUI(){
     const cnt=activeFilters.award.size;
     const btn=document.getElementById('awardDropBtn');
     const badge=document.getElementById('awardSelBadge');
+    const btnText=document.getElementById('awardDropBtnText');
     if(!btn)return;
-    if(cnt>0){btn.classList.add('has-selection-award');badge.style.display='inline';badge.textContent=cnt;}
-    else{btn.classList.remove('has-selection-award');badge.style.display='none';}
-    AWARD_KEYS.forEach(k=>{const chk=document.getElementById('chk_'+k);if(chk)chk.checked=activeFilters.award.has(k);});
+    if(cnt>0){
+        btn.classList.add('has-selection-award');
+        badge.style.display='inline';badge.textContent=cnt;
+        // 선택된 뱃지 이름들로 버튼 제목 업데이트
+        const labels=[];
+        if(activeFilters.award.has('auto_today_caf'))labels.push('카페인 오늘기록');
+        if(activeFilters.award.has('auto_today_sleep'))labels.push('수면 오늘기록');
+        if(activeFilters.award.has('awardNoTeacher'))labels.push('수여없음');
+        activeFilters.award.forEach(k=>{
+            if(!k.startsWith('badge_'))return;
+            const bid=k.replace('badge_','');
+            const b=challengeBadges.find(b=>b.id===bid);
+            if(b)labels.push((b.image||'')+' '+(b.name||bid));
+        });
+        let title='🏅 ';
+        if(labels.length<=2)title+=labels.join(', ');
+        else title+=labels.slice(0,2).join(', ')+' 외 '+(labels.length-2)+'개';
+        if(btnText)btnText.textContent=title;
+    } else {
+        btn.classList.remove('has-selection-award');
+        badge.style.display='none';
+        if(btnText)btnText.textContent='🏅 뱃지 분석';
+    }
+    getAwardKeys().forEach(k=>{const chk=document.getElementById('chk_'+k);if(chk)chk.checked=activeFilters.award.has(k);});
 }
 function _syncRecordUI(){
     const s=activeFilters.record;
@@ -2364,7 +2404,7 @@ function selectAllAward(e){
     e.stopPropagation();
     activeFilters.single='';
     document.getElementById('filterAll').classList.remove('active');
-    AWARD_KEYS.forEach(k=>activeFilters.award.add(k));
+    getAwardKeys().forEach(k=>activeFilters.award.add(k));
     _syncAwardUI();filterStudents();
 }
 function clearAward(e){
@@ -4531,6 +4571,28 @@ function getFilteredPending(){
 
 function loadChallengeBadges(){
     try{const r=localStorage.getItem('challengeBadges');if(r)challengeBadges=JSON.parse(r);}catch(e){}
+    rebuildAwardDropdown();
+}
+function rebuildAwardDropdown(){
+    const container=document.getElementById('awardBadgeItems');
+    if(!container)return;
+    // 기존 badge_ 필터는 드롭다운 재구성 전에 제거
+    [...activeFilters.award].filter(k=>k.startsWith('badge_')).forEach(k=>activeFilters.award.delete(k));
+    container.innerHTML='';
+    challengeBadges.forEach(b=>{
+        const key='badge_'+b.id;
+        const div=document.createElement('div');
+        div.className='adrop-item';
+        div.onclick=()=>toggleAwardItem(key);
+        const icon=b.image||'🏅';
+        const name=b.name||b.id;
+        const methodLabel=b.method==='consecutive'
+            ?`<span style="font-size:10px;color:#166534;background:#dcfce7;border-radius:4px;padding:1px 5px;margin-left:4px;">🔁${b.days}일연속</span>`
+            :`<span style="font-size:10px;color:#1e40af;background:#dbeafe;border-radius:4px;padding:1px 5px;margin-left:4px;">📊${b.days}일누적</span>`;
+        div.innerHTML=`<input type="checkbox" id="chk_${key}"><span class="adrop-dot" style="background:#7c3aed;"></span>${icon} ${name}${methodLabel}<span class="adrop-cnt" id="cntBadge_${b.id}">0</span>`;
+        container.appendChild(div);
+    });
+    if(typeof updateFilterCounts==='function')updateFilterCounts();
 }
 function saveChallengeBadges(){
     try{localStorage.setItem('challengeBadges',JSON.stringify(challengeBadges));}catch(e){}
@@ -5122,6 +5184,8 @@ function saveChallengeBadgeSettings(){
     saveChallengeBadges();
     saveBadgeGroupLabels();   // 그룹 이름·이모지 저장
     try{localStorage.setItem('monSettings',JSON.stringify(S));}catch(e){}
+    // 드롭다운 뱃지 목록 재구성
+    rebuildAwardDropdown();
     // 저장 후 감지 재실행
     detectPendingBadges();
     // GAS 서버 동기화
