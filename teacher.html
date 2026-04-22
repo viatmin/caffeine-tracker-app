@@ -1456,9 +1456,10 @@ function loadDataFromSheet(){
                         const pending = (prevLocal[sid] || []).filter(a => a._pendingSync);
                         if (pending.length > 0) {
                             if (!merged[sid]) merged[sid] = [];
-                            // 중복 방지: grantedAt+awardId 기준
+                            // 중복 방지: grantedAt + (awardId 또는 badgeId) 기준
                             pending.forEach(pa => {
-                                const dup = merged[sid].some(ga => ga.grantedAt === pa.grantedAt && ga.awardId === pa.awardId);
+                                const paId = pa.awardId || pa.badgeId;
+                                const dup = merged[sid].some(ga => ga.grantedAt === pa.grantedAt && (ga.awardId||ga.badgeId) === paId);
                                 if (!dup) merged[sid].push(pa);
                             });
                         }
@@ -3808,13 +3809,14 @@ function submitManualAward() {
         if (!manualAwards[id]) manualAwards[id] = [];
         selectedAwards.forEach(award => {
             manualAwards[id].push({
-                awardId  : award.id || award.awardId || '',  // ⭐ id → awardId 명시
+                awardId  : award.id || award.awardId || '',
                 name     : award.name,
                 image    : award.image || '🏅',
                 bg       : award.bg    || '#f3f4f6',
                 color    : award.color || '#374151',
                 message,
-                grantedAt   // ⭐ JS 시간 그대로 → GAS와 동일하게 맞춤
+                grantedAt,
+                _pendingSync: true
             });
         });
     });
@@ -4814,7 +4816,7 @@ function _doBulkApprovePending(items){
     items.forEach(({studentId,badgeId,badge})=>{
         const id=String(studentId);
         if(!manualAwards[id])manualAwards[id]=[];
-        manualAwards[id].push({badgeId:badge.id,name:badge.name,image:badge.image,bg:badge.bg,color:badge.color,grantedAt,grantedBy:'교사승인',message:''});
+        manualAwards[id].push({badgeId:badge.id,name:badge.name,image:badge.image,bg:badge.bg,color:badge.color,grantedAt,grantedBy:'교사승인',message:'',_pendingSync:true});
         pendingBadges=pendingBadges.filter(p=>!(p.studentId===studentId&&p.badgeId===badgeId));
     });
     saveManualAwards();
@@ -4824,7 +4826,9 @@ function _doBulkApprovePending(items){
     try{
         items.forEach(({studentId,badge})=>{
             const id=String(studentId);
-            google.script.run.withSuccessHandler(()=>{}).withFailureHandler(()=>{})
+            google.script.run
+                .withSuccessHandler(()=>{if(manualAwards[id])manualAwards[id].forEach(aw=>{if(aw.badgeId===badge.id&&aw.grantedAt===grantedAt)delete aw._pendingSync;});saveManualAwards();})
+                .withFailureHandler(()=>{})
                 .grantTeacherAwards({studentIds:[id],awards:[{awardId:badge.id,name:badge.name,image:badge.image,bg:badge.bg,color:badge.color,grantedAt,message:''}],message:'',grantedBy:'교사승인',grantedAt});
         });
     }catch(e){}
@@ -4872,13 +4876,15 @@ function _doApprovePendingBadge(studentId,badgeId,badge,displayName){
     const id=String(studentId);
     if(!manualAwards[id])manualAwards[id]=[];
     const grantedAt=new Date().toISOString().split('T')[0];
-    manualAwards[id].push({badgeId:badge.id,name:badge.name,image:badge.image,bg:badge.bg,color:badge.color,grantedAt,grantedBy:'교사승인',message:''});
+    manualAwards[id].push({badgeId:badge.id,name:badge.name,image:badge.image,bg:badge.bg,color:badge.color,grantedAt,grantedBy:'교사승인',message:'',_pendingSync:true});
     saveManualAwards();
     pendingBadges=pendingBadges.filter(p=>!(p.studentId===studentId&&p.badgeId===badgeId));
     savePendingBadges();
     // GAS 동기화 시도
     try{
-        google.script.run.withSuccessHandler(()=>{}).withFailureHandler(()=>{})
+        google.script.run
+            .withSuccessHandler(()=>{if(manualAwards[id])manualAwards[id].forEach(aw=>{if(aw.badgeId===badge.id&&aw.grantedAt===grantedAt)delete aw._pendingSync;});saveManualAwards();})
+            .withFailureHandler(()=>{})
             .grantTeacherAwards({studentIds:[id],awards:[{awardId:badge.id,name:badge.name,image:badge.image,bg:badge.bg,color:badge.color,grantedAt,message:''}],message:'',grantedBy:'교사승인',grantedAt});
     }catch(e){}
     renderPendingBadges();renderAwardsTab();updateStudentGrid();
