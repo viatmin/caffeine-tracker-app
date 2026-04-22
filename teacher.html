@@ -2803,10 +2803,10 @@ function exportStudentExcel(){
     
     // 현재 필터 적용된 학생 목록 생성
     const sv=document.getElementById('studentSearchInput').value.toLowerCase();
-    const gv=document.getElementById('studentGradeFilter').value,cv=document.getElementById('studentClassFilter').value;
+    const gv=msGet('studentGradeFilter'),cv=msGet('studentClassFilter');
     let students=studentsData;
-    if(gv!=='all')students=students.filter(s=>s.학년===gv);
-    if(cv!=='all')students=students.filter(s=>s.반===cv);
+    if(gv)students=students.filter(s=>gv.has(normalizeGrade(s.학년)));
+    if(cv)students=students.filter(s=>cv.has(s.반));
     if(sv)students=students.filter(s=>s.학번.includes(sv)||s.이름.includes(sv));
 
     // CSV 생성 (BOM 포함으로 한글 정상 표시)
@@ -2867,10 +2867,10 @@ function exportStudentToSheet(){
     const d7=getStudentDates();
 
     const sv=document.getElementById('studentSearchInput').value.toLowerCase();
-    const gv=document.getElementById('studentGradeFilter').value,cv=document.getElementById('studentClassFilter').value;
+    const gv=msGet('studentGradeFilter'),cv=msGet('studentClassFilter');
     let students=studentsData;
-    if(gv!=='all')students=students.filter(s=>s.학년===gv);
-    if(cv!=='all')students=students.filter(s=>s.반===cv);
+    if(gv)students=students.filter(s=>gv.has(normalizeGrade(s.학년)));
+    if(cv)students=students.filter(s=>cv.has(s.반));
     if(sv)students=students.filter(s=>s.학번.includes(sv)||s.이름.includes(sv));
 
     if(students.length===0){alert('내보낼 학생이 없습니다.');return;}
