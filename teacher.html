@@ -4212,12 +4212,29 @@ function loadBadgeConfigFromGAS() {
         .withSuccessHandler(function(result) {
             if (!result || !result.success) return;
             badgeConfigV2 = result.config;
+            // challengeStart / challengeEnd → S 객체 + UI 반영
+            if (badgeConfigV2.challengeStart) {
+                S.challengeStart = badgeConfigV2.challengeStart;
+                const scs = document.getElementById('setting_challengeStart');
+                if (scs) scs.value = badgeConfigV2.challengeStart;
+            }
+            if (badgeConfigV2.challengeEnd) {
+                S.challengeEnd = badgeConfigV2.challengeEnd;
+                const sce = document.getElementById('setting_challengeEnd');
+                if (sce) sce.value = badgeConfigV2.challengeEnd;
+            }
+            // GAS 뱃지 정의를 challengeBadges 변수에도 반영 (탐지 로직에 사용)
+            if (badgeConfigV2.badges && badgeConfigV2.badges.length > 0) {
+                challengeBadges = badgeConfigV2.badges;
+                saveChallengeBadges();
+                rebuildAwardDropdown();
+            }
             renderBadgeConfigRows();
         })
         .withFailureHandler(function(err) {
             console.warn('뱃지 설정 로드 실패:', err);
         })
-        .getBadgeConfig();
+        .getChallengeBadgeConfig();
 }
 
 function renderBadgeConfigRows() {
@@ -4332,27 +4349,44 @@ function loadBadgeThresholdsFromGAS() { loadBadgeConfigFromGAS(); }
 function saveBadgeThresholdsToGAS()   { saveBadgeConfigToGAS(); }
 
 function loadAwardSettings() {
+    // 로컬 먼저 (빠른 초기화)
     try {
         const raw = localStorage.getItem('awardSettings');
         if (raw) {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed) && parsed.length > 0) {
-                // 시스템 뱃지(habit_start, streak_record, today_record)는 편집 목록에서 제외
                 const filtered = parsed.filter(a =>
                     a.id !== 'habit_start' && a.id !== 'streak_record' && a.id !== 'today_record'
                 );
                 awardSettings = filtered.length > 0 ? filtered : JSON.parse(JSON.stringify(DEFAULT_AWARDS));
-                localStorage.setItem('awardSettings', JSON.stringify(awardSettings));
-                return;
             }
         }
     } catch(e) {}
-    awardSettings = JSON.parse(JSON.stringify(DEFAULT_AWARDS)); // deep copy
+    if (!awardSettings.length) awardSettings = JSON.parse(JSON.stringify(DEFAULT_AWARDS));
+    // GAS에서 덮어쓰기 (다른 컴퓨터에서 저장한 설정 반영)
+    try {
+        google.script.run
+            .withSuccessHandler(function(res) {
+                if (!res || !res.success || !res.data) return;
+                const parsed = res.data;
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    const filtered = parsed.filter(a =>
+                        a.id !== 'habit_start' && a.id !== 'streak_record' && a.id !== 'today_record'
+                    );
+                    awardSettings = filtered.length > 0 ? filtered : JSON.parse(JSON.stringify(DEFAULT_AWARDS));
+                    try { localStorage.setItem('awardSettings', JSON.stringify(awardSettings)); } catch(e) {}
+                    renderAwardSettingList();
+                }
+            })
+            .withFailureHandler(function() {})
+            .getAwardSettings();
+    } catch(e) {}
 }
 
 function saveAwardSettings() {
     syncAwardEditorToSettings();
     try { localStorage.setItem('awardSettings', JSON.stringify(awardSettings)); } catch(e) {}
+    try { google.script.run.withFailureHandler(function(){}).saveAwardSettingsData(awardSettings); } catch(e) {}
 }
 
 // 자동 뱃지: 오늘 카페인/수면 기록만 (교사 승인 없이 자동 표시)
@@ -4599,15 +4633,50 @@ function saveChallengeBadges(){
 }
 function loadPendingBadges(){
     try{const r=localStorage.getItem('pendingBadges');if(r)pendingBadges=JSON.parse(r);}catch(e){}
+    try{
+        google.script.run
+            .withSuccessHandler(function(res){
+                if(!res||!res.success)return;
+                const fromGAS=res.data||[];
+                const merged=[...fromGAS];
+                pendingBadges.forEach(function(local){
+                    if(!merged.some(function(g){return g.studentId===local.studentId&&g.badgeId===local.badgeId;}))
+                        merged.push(local);
+                });
+                pendingBadges=merged;
+                try{localStorage.setItem('pendingBadges',JSON.stringify(pendingBadges));}catch(e){}
+                renderPendingBadges();
+            })
+            .withFailureHandler(function(){})
+            .getPendingBadges();
+    }catch(e){}
 }
 function savePendingBadges(){
     try{localStorage.setItem('pendingBadges',JSON.stringify(pendingBadges));}catch(e){}
+    try{google.script.run.withFailureHandler(function(){}).savePendingBadgesData(pendingBadges);}catch(e){}
 }
 function loadDismissedBadges(){
     try{const r=localStorage.getItem('dismissedBadges');if(r)dismissedBadges=JSON.parse(r);}catch(e){}
+    try{
+        google.script.run
+            .withSuccessHandler(function(res){
+                if(!res||!res.success)return;
+                const fromGAS=res.data||[];
+                const merged=[...fromGAS];
+                dismissedBadges.forEach(function(local){
+                    if(!merged.some(function(g){return g.studentId===local.studentId&&g.badgeId===local.badgeId;}))
+                        merged.push(local);
+                });
+                dismissedBadges=merged;
+                try{localStorage.setItem('dismissedBadges',JSON.stringify(dismissedBadges));}catch(e){}
+            })
+            .withFailureHandler(function(){})
+            .getDismissedBadges();
+    }catch(e){}
 }
 function saveDismissedBadges(){
     try{localStorage.setItem('dismissedBadges',JSON.stringify(dismissedBadges));}catch(e){}
+    try{google.script.run.withFailureHandler(function(){}).saveDismissedBadgesData(dismissedBadges);}catch(e){}
 }
 
 // 기존 자동뱃지 초기화 (1회 마이그레이션)
