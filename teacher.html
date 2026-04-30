@@ -167,6 +167,8 @@
         .ai-toggle-arrow.open{transform:rotate(180deg);}
         .ai-box-body{display:none;padding:16px 20px;background:linear-gradient(135deg,#f0f4ff,#faf5ff);border:1px solid #c7d2fe;border-top:none;border-radius:0 0 12px 12px;margin-bottom:20px;}
         .ai-box-body.open{display:block;}
+        .ai-content[contenteditable=true]{background:#fff;border:2px solid #6366f1;border-radius:8px;padding:12px;outline:none;cursor:text;}
+
         .ai-content{font-size:14px;line-height:1.9;color:#374151;white-space:pre-wrap;}
         .ai-loading{display:flex;align-items:center;gap:10px;color:#6b7280;font-size:14px;}
         .ai-spinner{border:3px solid #e5e7eb;border-top:3px solid #6366f1;border-radius:50%;width:20px;height:20px;animation:spin 1s linear infinite;}
@@ -199,6 +201,7 @@
             body,html{background:#ffffff !important;}
             #pdfOnlyContent{display:block !important;padding:24px 32px;background:#ffffff !important;}
             *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+            .ai-fallback-badge{display:none !important;}
 
             .pdf-header{margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #e5e7eb;}
             .pdf-header h2{font-size:22px;font-weight:700;color:#1f2937;margin-bottom:6px;}
@@ -1172,6 +1175,22 @@
                 </div>
                 <div class="ai-box-body" id="aiBoxBody">
                     <div class="ai-content" id="aiContent"><span style="color:#9ca3af;font-size:14px;">'🤖 AI 건강분석' 버튼을 클릭하면 결과가 여기에 표시됩니다.</span></div>
+                    <!-- AI 분석 수정/저장 버튼 -->
+                    <div id="aiEditBar" style="display:none;margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <button id="aiEditBtn" onclick="startAIEdit()" class="btn btn-sm" style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;">✏️ 수정</button>
+                        <button id="aiSaveBtn" onclick="saveAIEdit()" class="btn btn-sm btn-primary" style="display:none;">💾 저장</button>
+                        <button id="aiCancelBtn" onclick="cancelAIEdit()" class="btn btn-sm" style="display:none;background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">취소</button>
+                        <span id="aiSavedBadge" style="display:none;font-size:12px;color:#10b981;font-weight:600;">✓ 저장됨</span>
+                    </div>
+                    <!-- 서식 도구모음 (수정 모드에서만 표시) -->
+                    <div id="aiFormatBar" style="display:none;margin-top:8px;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 12px;background:#f8f9ff;border:1px solid #e0e7ff;border-radius:8px;">
+                        <span style="font-size:11px;color:#6b7280;font-weight:600;margin-right:2px;">서식</span>
+                        <button onmousedown="event.preventDefault();formatAIText('bold')" title="굵게 (Ctrl+B)" style="font-weight:800;width:30px;height:28px;border:1px solid #d1d5db;background:#fff;border-radius:4px;cursor:pointer;font-size:14px;">B</button>
+                        <button onmousedown="event.preventDefault();formatAIText('underline')" title="밑줄 (Ctrl+U)" style="text-decoration:underline;width:30px;height:28px;border:1px solid #d1d5db;background:#fff;border-radius:4px;cursor:pointer;font-size:14px;">U</button>
+                        <button onmousedown="event.preventDefault();formatAIText('red')" title="빨간색" style="color:#ef4444;font-weight:800;width:30px;height:28px;border:1px solid #d1d5db;background:#fff;border-radius:4px;cursor:pointer;font-size:14px;">A</button>
+                        <button onmousedown="event.preventDefault();formatAIText('removeFormat')" title="서식 제거" style="width:46px;height:28px;border:1px solid #d1d5db;background:#fff;border-radius:4px;cursor:pointer;font-size:11px;color:#6b7280;">지우기</button>
+                    </div>
+
                 </div>
             </div>
             <h3 class="section-title">📈 카페인 &amp; 수면 현황 <span id="chartRangeLabel" style="font-size:13px;color:#9ca3af;font-weight:400;"></span></h3>
@@ -1379,6 +1398,10 @@ function getCustomRange(s,e){const a=[],start=new Date(s+'T00:00:00'),end=new Da
 function getPeriodN(mode){return mode==='14'?14:mode==='30'?30:7;}
 function getPeriodLabel(dates){if(!dates||!dates.length)return '-';return dates[0].substring(5)+' ~ '+dates[dates.length-1].substring(5)+' ('+dates.length+'일)';}
 
+// 테스트 학생 필터 (종합/카페인/수면 대시보드에서만 제외, 학생목록에는 표시)
+const TEST_STUDENT_NAMES=new Set(['테스트','테스트1']);
+function isTestStudent(s){return TEST_STUDENT_NAMES.has((s.이름||'').trim());}
+
 // 탭별 날짜 배열 반환
 function getOverviewDates(){if(overviewPeriodMode==='custom'){const s=document.getElementById('overviewStartDate')?.value,e=document.getElementById('overviewEndDate')?.value||today;return s?getCustomRange(s,e):getLastNDates(e,7);}return getLastNDates(today,getPeriodN(overviewPeriodMode));}
 function getCafDates(){if(cafPeriodMode==='custom'){const s=document.getElementById('cafStartDate')?.value,e=document.getElementById('cafEndDate')?.value||today;return s?getCustomRange(s,e):getLastNDates(e,7);}return getLastNDates(document.getElementById('cafDateFilter')?.value||today,getPeriodN(cafPeriodMode));}
@@ -1508,6 +1531,8 @@ function loadDataFromSheet(){
 
                 document.getElementById('lastUpdate').textContent='마지막 업데이트: '+new Date().toLocaleString('ko-KR');
                 initFilters();updateDashboard();updateCaffeineTab();updateSleepTab();updateStudentGrid();
+                // ⭐ _pendingSync 항목 자동 재시도 (이전 GAS 실패 복구)
+                retryPendingSyncs();
                 // 챌린지 달성 감지 실행
                 detectPendingBadges();
                 // 뱃지 탭이 열려있으면 자동 갱신
@@ -1735,7 +1760,7 @@ function switchTab(n,el){document.querySelectorAll('.tab-button').forEach(b=>b.c
 
 function updateDashboard(){
     const g=msGet('gradeFilter'), c=msGet('classFilter');
-    let f=studentsData;if(g)f=f.filter(s=>g.has(normalizeGrade(s.학년)));if(c)f=f.filter(s=>c.has(normalizeClass(s.반)));
+    let f=studentsData.filter(s=>!isTestStudent(s));if(g)f=f.filter(s=>g.has(normalizeGrade(s.학년)));if(c)f=f.filter(s=>c.has(normalizeClass(s.반)));
     const dates7=getOverviewDates();
     const daysText=dates7.length+'일';
     ['overviewCafTitle','overviewSleepTitle'].forEach(id=>{const el=document.getElementById(id);if(el)el.textContent=daysText;});
@@ -1782,7 +1807,7 @@ function getCafTabFilter(){
     const dates=getCafDates();
     const lbl=document.getElementById('cafDateRangeLabel');
     if(lbl)lbl.textContent=getPeriodLabel(dates);
-    let students=studentsData;
+    let students=studentsData.filter(s=>!isTestStudent(s));
     if(gv)students=students.filter(s=>gv.has(normalizeGrade(s.학년)));
     if(cv)students=students.filter(s=>cv.has(normalizeClass(s.반)));
     const ids=new Set(students.map(s=>s.학번));
@@ -1907,7 +1932,7 @@ function getSleepTabFilter(){
     const dates=getSleepDates();
     const lbl=document.getElementById('sleepDateRangeLabel');
     if(lbl)lbl.textContent=getPeriodLabel(dates);
-    let students=studentsData;
+    let students=studentsData.filter(s=>!isTestStudent(s));
     if(gv)students=students.filter(s=>gv.has(normalizeGrade(s.학년)));
     if(cv)students=students.filter(s=>cv.has(normalizeClass(s.반)));
     const ids=new Set(students.map(s=>s.학번));
@@ -2510,12 +2535,28 @@ function openStudentModal(id){
     document.getElementById('aiContent').innerHTML='<span style="color:#9ca3af;font-size:14px;">\'🤖 AI 건강분석\' 버튼을 클릭하면 결과가 여기에 표시됩니다.</span>';
     document.getElementById('aiStatusBadge').textContent='(분석 전)';document.getElementById('aiStatusBadge').style.color='#818cf8';
     document.getElementById('aiBoxBody').classList.remove('open');document.getElementById('aiArrow').classList.remove('open');
-    const listDate = studentPeriodMode==='custom'?(document.getElementById('studentEndDate')?.value||today):(document.getElementById('studentDateFilter')?.value||today);
-    modalPeriodMode='7';
-    ['7','14','30','custom'].forEach(m=>{document.getElementById('modalPeriodBtn'+m)?.classList.toggle('active',m==='7');});
-    const msw=document.getElementById('modalStartDateWrap');if(msw)msw.style.display='none';
-    document.getElementById('modalEndDate').value=listDate;document.getElementById('modalEndDate').max=today;
+    // 편집바 및 채팅창 초기화
+    const _eb=document.getElementById('aiEditBar');if(_eb)_eb.style.display='none';
+    const _ac=document.getElementById('aiContent');if(_ac)_ac.contentEditable='false';
+    // 학생 목록에서 설정한 날짜 범위를 모달에 그대로 적용
+    modalPeriodMode=studentPeriodMode;
+    ['7','14','30','custom'].forEach(m=>{document.getElementById('modalPeriodBtn'+m)?.classList.toggle('active',m===studentPeriodMode);});
+    const msw=document.getElementById('modalStartDateWrap');
+    if(studentPeriodMode==='custom'){
+        if(msw)msw.style.display='flex';
+        const ssd=document.getElementById('studentStartDate')?.value||getLastNDates(today,7)[0];
+        const sed=document.getElementById('studentEndDate')?.value||today;
+        const msd=document.getElementById('modalStartDate');if(msd)msd.value=ssd;
+        document.getElementById('modalEndDate').value=sed;
+    }else{
+        if(msw)msw.style.display='none';
+        const listDate=document.getElementById('studentDateFilter')?.value||today;
+        document.getElementById('modalEndDate').value=listDate;
+    }
+    document.getElementById('modalEndDate').max=today;
     refreshModalData();document.getElementById('studentModal').classList.add('active');
+    // 저장된 AI 분석 결과가 있으면 자동 로드
+    loadSavedAIReport();
 }
 function closeModal(){document.getElementById('studentModal').classList.remove('active');}
 window.onclick=e=>{if(e.target===document.getElementById('studentModal'))closeModal();};
@@ -2737,20 +2778,129 @@ async function requestAIAnalysis(){
         .withSuccessHandler(function(result){
             if(result.success&&result.analysis&&result.analysis.length>50){
                 const fmt=result.analysis.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
-                aiContent.innerHTML=fmt;badge.textContent='(AI 분석 완료 ✓)';badge.style.color='#10b981';
+                aiContent.innerHTML=fmt;
+                const isFallback=result.source&&result.source.includes('Fallback');
+                badge.classList.toggle('ai-fallback-badge',!!isFallback);
+                if(isFallback){
+                    badge.textContent='(대체 분석 ⚠️)';badge.style.color='#f59e0b';
+                }else{
+                    badge.textContent='(AI 분석 완료 ✓)';badge.style.color='#10b981';
+                }
             }else{
                 aiContent.innerHTML=generateFallbackAnalysis(promptData,avgCaf,avgSlp,lim);
-                badge.textContent='(대체 분석)';badge.style.color='#f59e0b';
+                badge.textContent='(대체 분석 ⚠️)';badge.style.color='#f59e0b';
+                badge.classList.add('ai-fallback-badge');
             }
             btn.disabled=false;btn.textContent='🤖 AI 건강분석';
+            showAITools();
         })
         .withFailureHandler(function(err){
             aiContent.innerHTML=generateFallbackAnalysis(promptData,avgCaf,avgSlp,lim);
-            badge.textContent='(대체 분석)';badge.style.color='#f59e0b';
+            badge.textContent='(대체 분석 ⚠️)';badge.style.color='#f59e0b';
+            badge.classList.add('ai-fallback-badge');
             btn.disabled=false;btn.textContent='🤖 AI 건강분석';
+            showAITools();
         })
         .handleAIReportForTeacher(promptData);
 }
+
+// ── AI 분석 수정/저장 ───────────────────────────────────────────
+let _aiOriginalHTML = '';
+function showAITools(){
+    const bar=document.getElementById('aiEditBar');if(bar)bar.style.display='flex';
+    document.getElementById('aiSavedBadge').style.display='none';
+    document.getElementById('aiEditBtn').style.display='';
+    document.getElementById('aiSaveBtn').style.display='none';
+    document.getElementById('aiCancelBtn').style.display='none';
+}
+
+// AI 분석 결과 저장본 불러오기 (모달 열릴 때)
+function loadSavedAIReport(){
+    const dates=getModalDates();
+    const startDate=dates[0]||today;
+    const endDate=dates[dates.length-1]||today;
+    google.script.run
+        .withSuccessHandler(function(res){
+            if(res&&res.success&&res.content){
+                const aiContent=document.getElementById('aiContent');
+                aiContent.innerHTML=res.content.includes('<')?res.content:res.content.replace(/\n/g,'<br>');
+                document.getElementById('aiStatusBadge').textContent='(저장된 분석 ✓)';
+                document.getElementById('aiStatusBadge').style.color='#10b981';
+                document.getElementById('aiBoxBody').classList.add('open');
+                document.getElementById('aiArrow').classList.add('open');
+                showAITools();
+                const badge=document.getElementById('aiSavedBadge');
+                badge.textContent='✓ 저장됨 ('+res.savedAt+')';
+                badge.style.color='#10b981';badge.style.display='';
+            }
+        })
+        .withFailureHandler(function(){})
+        .getAIReport(currentStudentId, startDate, endDate);
+}
+function startAIEdit(){
+    const el=document.getElementById('aiContent');
+    _aiOriginalHTML=el.innerHTML;
+    el.contentEditable='true';el.focus();
+    document.getElementById('aiEditBtn').style.display='none';
+    document.getElementById('aiSaveBtn').style.display='';
+    document.getElementById('aiCancelBtn').style.display='';
+    document.getElementById('aiSavedBadge').style.display='none';
+    document.getElementById('aiFormatBar').style.display='flex';
+}
+function formatAIText(type){
+    const el=document.getElementById('aiContent');
+    el.focus();
+    if(type==='bold'){document.execCommand('bold',false,null);}
+    else if(type==='underline'){document.execCommand('underline',false,null);}
+    else if(type==='red'){document.execCommand('foreColor',false,'#ef4444');}
+    else if(type==='removeFormat'){document.execCommand('removeFormat',false,null);}
+}
+function saveAIEdit(){
+    const el=document.getElementById('aiContent');
+    el.contentEditable='false';
+    const saveBtn=document.getElementById('aiSaveBtn');
+    const badge=document.getElementById('aiSavedBadge');
+    saveBtn.disabled=true;saveBtn.textContent='저장 중...';
+    badge.style.display='none';
+
+    const dates=getModalDates();
+    const startDate=dates[0]||today;
+    const endDate=dates[dates.length-1]||today;
+    // HTML 태그 제거 후 저장 (URL 길이 제한 및 시트 가독성)
+    const tmp=document.createElement('div');
+    tmp.innerHTML=el.innerHTML;
+    tmp.querySelectorAll('br').forEach(br=>br.replaceWith('\n'));
+    tmp.querySelectorAll('p,div').forEach(b=>b.insertAdjacentText('afterend','\n'));
+    const content=tmp.textContent.replace(/\n{3,}/g,'\n\n').trim();
+
+    google.script.run
+        .withSuccessHandler(function(res){
+            saveBtn.disabled=false;saveBtn.textContent='💾 저장';
+            document.getElementById('aiEditBtn').style.display='';
+            saveBtn.style.display='none';
+            document.getElementById('aiCancelBtn').style.display='none';
+            document.getElementById('aiFormatBar').style.display='none';
+            badge.textContent=res.success?'✓ 저장됨':'⚠️ 저장 실패';
+            badge.style.color=res.success?'#10b981':'#ef4444';
+            badge.style.display='';
+        })
+        .withFailureHandler(function(){
+            saveBtn.disabled=false;saveBtn.textContent='💾 저장';
+            document.getElementById('aiFormatBar').style.display='none';
+            badge.textContent='⚠️ 저장 실패';badge.style.color='#ef4444';badge.style.display='';
+        })
+        .saveAIReport(currentStudentId, startDate, endDate, content, (studentsData.find(s=>s.학번===currentStudentId)||{}).이름||'');
+}
+function cancelAIEdit(){
+    const el=document.getElementById('aiContent');
+    el.innerHTML=_aiOriginalHTML;
+    el.contentEditable='false';
+    document.getElementById('aiEditBtn').style.display='';
+    document.getElementById('aiSaveBtn').style.display='none';
+    document.getElementById('aiCancelBtn').style.display='none';
+    document.getElementById('aiFormatBar').style.display='none';
+}
+
 
 
 function generateFallbackAnalysis(pd, avgCaf, avgSlp, lim){
@@ -2970,9 +3120,10 @@ function exportPDF(){
     const slpInfo=getSleepStatusInfo(asl);
     document.getElementById('pdf_sleepStatus').textContent=slpInfo.text;
 
-    const aiText=document.getElementById('aiContent').innerText||'';
+    const aiHTML=document.getElementById('aiContent').innerHTML||'';
     const badgeT=document.getElementById('aiStatusBadge').textContent;
-    if(badgeT.includes('완료')){document.getElementById('pdf_aiBox').style.display='block';document.getElementById('pdf_aiContent').textContent=aiText;}
+    const hasAnalysis=badgeT.includes('완료')||badgeT.includes('대체 분석');
+    if(hasAnalysis&&aiHTML.length>50){document.getElementById('pdf_aiBox').style.display='block';document.getElementById('pdf_aiContent').innerHTML=aiHTML;}
     else{document.getElementById('pdf_aiBox').style.display='none';}
 
     const rl=`(${dates[0].substring(5)} ~ ${dates[dates.length-1].substring(5)})`;
@@ -3689,7 +3840,7 @@ function openManualAwardModal(mode) {
     if (mode === 'single') {
         const s = studentsData.find(st => st.학번 === currentStudentId);
         titleEl.textContent = '🏅 뱃지 수여';
-        subtitleEl.textContent = s ? `${s.이름} (${s.학번}) 학생에게 뱃지를 수여합니다` : '';
+        subtitleEl.textContent = s ? `${s.학번} ${s.이름} 학생에게 뱃지를 수여합니다` : '';
         batchSection.style.display = 'none';
     } else {
         titleEl.textContent = '🏅 일괄 뱃지 수여';
@@ -4071,8 +4222,10 @@ function _doDeleteManualAward(studentId, idx) {
 
 // 기본 뱃지 정의 (habit_start·streak_record는 시스템 뱃지로 항상 자동 평가 — 편집 목록 제외)
 const DEFAULT_AWARDS = [
-    { id:'caf_safe',   name:'카페인 안전', image:'☕', bg:'#ecfdf5', color:'#059669' },
-    { id:'sleep_good', name:'수면 적정',   image:'😴', bg:'#eff6ff', color:'#2563eb' },
+    { id:'caf_reg3',   name:'카페인 3회 등록', image:'☕', bg:'#ecfdf5', color:'#059669' },
+    { id:'sleep_reg3', name:'수면 3회 등록',   image:'😴', bg:'#eff6ff', color:'#2563eb' },
+    { id:'caf_reg6',   name:'카페인 6회 등록', image:'☕', bg:'#d1fae5', color:'#065f46' },
+    { id:'sleep_reg6', name:'수면 6회 등록',   image:'😴', bg:'#dbeafe', color:'#1d4ed8' },
 ];
 
 // 시스템 뱃지: 편집 불가, 임계값은 교사 설정(S.badgeHabitDays 등)으로 제어
@@ -4349,36 +4502,53 @@ function loadBadgeThresholdsFromGAS() { loadBadgeConfigFromGAS(); }
 function saveBadgeThresholdsToGAS()   { saveBadgeConfigToGAS(); }
 
 function loadAwardSettings() {
-    // 로컬 먼저 (빠른 초기화)
-    try {
-        const raw = localStorage.getItem('awardSettings');
-        if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-                const filtered = parsed.filter(a =>
-                    a.id !== 'habit_start' && a.id !== 'streak_record' && a.id !== 'today_record'
-                );
-                awardSettings = filtered.length > 0 ? filtered : JSON.parse(JSON.stringify(DEFAULT_AWARDS));
-            }
-        }
-    } catch(e) {}
-    if (!awardSettings.length) awardSettings = JSON.parse(JSON.stringify(DEFAULT_AWARDS));
-    // GAS에서 덮어쓰기 (다른 컴퓨터에서 저장한 설정 반영)
+    // 1) 초기값: DEFAULT_AWARDS (localStorage 캐시는 GAS 실패 시에만 fallback)
+    awardSettings = JSON.parse(JSON.stringify(DEFAULT_AWARDS));
+
+    // 2) GAS에서 최신 설정 로드 (source of truth)
     try {
         google.script.run
             .withSuccessHandler(function(res) {
-                if (!res || !res.success || !res.data) return;
-                const parsed = res.data;
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                    const filtered = parsed.filter(a =>
+                if (res && res.success && res.data && Array.isArray(res.data) && res.data.length > 0) {
+                    const filtered = res.data.filter(a =>
                         a.id !== 'habit_start' && a.id !== 'streak_record' && a.id !== 'today_record'
                     );
                     awardSettings = filtered.length > 0 ? filtered : JSON.parse(JSON.stringify(DEFAULT_AWARDS));
-                    try { localStorage.setItem('awardSettings', JSON.stringify(awardSettings)); } catch(e) {}
-                    renderAwardSettingList();
+                } else {
+                    // GAS에 저장된 데이터 없음 → localStorage fallback
+                    try {
+                        const raw = localStorage.getItem('awardSettings');
+                        if (raw) {
+                            const parsed = JSON.parse(raw);
+                            const filtered = (Array.isArray(parsed) ? parsed : []).filter(a =>
+                                a.id !== 'habit_start' && a.id !== 'streak_record' && a.id !== 'today_record'
+                            );
+                            if (filtered.length > 0) awardSettings = filtered;
+                        }
+                    } catch(e) {}
+                }
+                // localStorage 캐시 갱신
+                try { localStorage.setItem('awardSettings', JSON.stringify(awardSettings)); } catch(e) {}
+                // 설정 탭 에디터 갱신
+                renderAwardSettingList();
+                // 뱃지 수여 모달이 열려있으면 팔레트도 즉시 갱신
+                if (document.getElementById('manualAwardModal')?.classList.contains('active')) {
+                    renderAwardPalette();
                 }
             })
-            .withFailureHandler(function() {})
+            .withFailureHandler(function() {
+                // GAS 실패 시 localStorage fallback
+                try {
+                    const raw = localStorage.getItem('awardSettings');
+                    if (raw) {
+                        const parsed = JSON.parse(raw);
+                        const filtered = (Array.isArray(parsed) ? parsed : []).filter(a =>
+                            a.id !== 'habit_start' && a.id !== 'streak_record' && a.id !== 'today_record'
+                        );
+                        if (filtered.length > 0) { awardSettings = filtered; renderAwardSettingList(); }
+                    }
+                } catch(e) {}
+            })
             .getAwardSettings();
     } catch(e) {}
 }
@@ -4386,7 +4556,24 @@ function loadAwardSettings() {
 function saveAwardSettings() {
     syncAwardEditorToSettings();
     try { localStorage.setItem('awardSettings', JSON.stringify(awardSettings)); } catch(e) {}
-    try { google.script.run.withFailureHandler(function(){}).saveAwardSettingsData(awardSettings); } catch(e) {}
+    try {
+        google.script.run
+            .withSuccessHandler(function(res) {
+                if (res && res.success) {
+                    // 성공 토스트
+                    const toast = document.getElementById('settingsToast');
+                    if (toast) { toast.textContent = '✅ 뱃지 팔레트가 저장되었습니다!'; toast.style.display = 'block'; setTimeout(() => { toast.style.display = 'none'; }, 2500); }
+                } else {
+                    showTeacherModal('⚠️', '뱃지 설정 저장 실패',
+                        'GAS에 저장하지 못했습니다.\n('+((res&&res.error)||'알 수 없는 오류')+')\n\nLocalStorage에는 저장됐으므로 이 기기에서는 유지됩니다.', 'warning');
+                }
+            })
+            .withFailureHandler(function(err) {
+                showTeacherModal('⚠️', '뱃지 설정 저장 실패',
+                    'GAS 연결 오류로 저장하지 못했습니다.\n('+String(err)+')\n\nLocalStorage에는 저장됐으므로 이 기기에서는 유지됩니다.', 'warning');
+            })
+            .saveAwardSettingsData(awardSettings);
+    } catch(e) {}
 }
 
 // 자동 뱃지: 오늘 카페인/수면 기록만 (교사 승인 없이 자동 표시)
@@ -4691,6 +4878,55 @@ function migrateOldBadges(){
     });
     if(changed)saveManualAwards();
     localStorage.setItem('badgeMigrationV3','1');
+}
+
+// ── _pendingSync 자동 재시도: 데이터 새로고침 시 GAS 저장 실패 항목 복구 ──
+function retryPendingSyncs() {
+    // 1) manualAwards에서 _pendingSync 항목 수집
+    const toRetry = {}; // { badgeKey: { aw, studentIds: [] } }
+    Object.entries(manualAwards).forEach(([sid, list]) => {
+        (list || []).forEach(aw => {
+            if (!aw._pendingSync) return;
+            const bid = aw.badgeId || aw.awardId || '';
+            if (!bid) return;
+            const key = bid + '|' + (aw.grantedAt || '');
+            if (!toRetry[key]) toRetry[key] = { aw, studentIds: [] };
+            toRetry[key].studentIds.push(sid);
+        });
+    });
+    if (Object.keys(toRetry).length === 0) return;
+    console.log('[재시도] _pendingSync 항목 감지:', Object.keys(toRetry).length, '종류 → GAS 저장 재시도');
+
+    // 2) 각 그룹을 GAS에 재전송
+    Object.values(toRetry).forEach(({ aw, studentIds }) => {
+        const bid = aw.badgeId || aw.awardId || '';
+        const grantedAt = aw.grantedAt || new Date().toISOString().split('T')[0];
+        try {
+            google.script.run
+                .withSuccessHandler(res => {
+                    if (res && res.success) {
+                        // 성공 시 _pendingSync 해제
+                        studentIds.forEach(sid => {
+                            if (manualAwards[sid]) manualAwards[sid].forEach(a => {
+                                if ((a.badgeId || a.awardId) === bid && a.grantedAt === grantedAt) delete a._pendingSync;
+                            });
+                        });
+                        saveManualAwards();
+                        console.log('[재시도] GAS 저장 성공:', bid, '/', studentIds.length, '명');
+                    }
+                })
+                .withFailureHandler(() => {
+                    console.warn('[재시도] GAS 저장 재시도 실패 — 다음 새로고침까지 보류:', bid);
+                })
+                .grantTeacherAwards({
+                    studentIds,
+                    awards: [{ awardId: bid, name: aw.name, image: aw.image, bg: aw.bg, color: aw.color, grantedAt }],
+                    message: aw.message || '',
+                    grantedBy: aw.grantedBy || '교사승인',
+                    grantedAt
+                });
+        } catch(e) {}
+    });
 }
 
 // ── 달성 감지 함수 ────────────────────────────────────────
@@ -5019,9 +5255,16 @@ function _doBulkApprovePending(items){
                             });
                         });
                         saveManualAwards();
+                    } else {
+                        console.warn('[일괄수여] GAS 저장 실패:', res&&res.error);
                     }
                 })
-                .withFailureHandler(()=>{})
+                .withFailureHandler(err=>{
+                    // 로컬에는 저장됨(_pendingSync=true) → 다음 데이터 새로고침 시 자동 재시도
+                    console.warn('[일괄수여] GAS 연결 실패 — 다음 새로고침 시 재동기화:', err);
+                    showTeacherModal('⚠️','시트 저장 실패 (일괄 수여)',
+                        `일괄 수여는 <strong>임시 저장</strong>되었습니다.<br>GAS 연결 오류로 시트에 저장하지 못했습니다.<br><br>🔄 <strong>데이터 새로고침</strong>을 누르면 자동 재시도합니다.`,'warning');
+                })
                 .grantTeacherAwards({studentIds,awards:[{awardId:badge.id,name:badge.name,image:badge.image,bg:badge.bg,color:badge.color,grantedAt,message:''}],message:'',grantedBy:'교사승인',grantedAt});
         });
     }catch(e){}
@@ -5076,8 +5319,20 @@ function _doApprovePendingBadge(studentId,badgeId,badge,displayName){
     // GAS 동기화 시도
     try{
         google.script.run
-            .withSuccessHandler(res=>{if(res&&res.success){if(manualAwards[id])manualAwards[id].forEach(aw=>{if(aw.badgeId===badge.id&&aw.grantedAt===grantedAt)delete aw._pendingSync;});saveManualAwards();}})
-            .withFailureHandler(()=>{})
+            .withSuccessHandler(res=>{
+                if(res&&res.success){
+                    if(manualAwards[id])manualAwards[id].forEach(aw=>{if(aw.badgeId===badge.id&&aw.grantedAt===grantedAt)delete aw._pendingSync;});
+                    saveManualAwards();
+                } else {
+                    console.warn('[뱃지수여] GAS 저장 실패:', res&&res.error);
+                }
+            })
+            .withFailureHandler(err=>{
+                // 로컬에는 저장됨(_pendingSync=true) → 다음 데이터 새로고침 시 자동 재시도
+                console.warn('[뱃지수여] GAS 연결 실패 — 다음 새로고침 시 재동기화:', err);
+                showTeacherModal('⚠️','시트 저장 실패',
+                    `뱃지 수여는 <strong>임시 저장</strong>되었습니다.<br>GAS 연결 오류로 시트에 저장하지 못했습니다.<br><br>🔄 <strong>데이터 새로고침</strong>을 누르면 자동 재시도합니다.`,'warning');
+            })
             .grantTeacherAwards({studentIds:[id],awards:[{awardId:badge.id,name:badge.name,image:badge.image,bg:badge.bg,color:badge.color,grantedAt,message:''}],message:'',grantedBy:'교사승인',grantedAt});
     }catch(e){}
     renderPendingBadges();renderAwardsTab();updateStudentGrid();
